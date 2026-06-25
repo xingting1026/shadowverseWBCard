@@ -4,7 +4,7 @@ import time
 import requests
 from pathlib import Path
 from .config import (DECKLOG_IMG_BASE, DECKLOG_IMG_REFERER, USER_AGENT,
-                     IMG_CACHE_DIR, REQUEST_DELAY)
+                     IMG_CACHE_DIR, IMG_FETCH_DELAY)
 
 # 1x1 透明 PNG。官方圖抓不到時用它佔位並快取，避免每次 render 重打 404、避免 /img 回 500。
 _PLACEHOLDER = base64.b64decode(
@@ -27,7 +27,8 @@ def image_url_candidates(card_number, img=None):
 
 
 def _http_get(url, headers):
-    time.sleep(REQUEST_DELAY)
+    if IMG_FETCH_DELAY:
+        time.sleep(IMG_FETCH_DELAY)
     r = requests.get(url, headers=headers, timeout=20)
     r.raise_for_status()
     return r.content
