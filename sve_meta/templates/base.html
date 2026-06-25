@@ -1,0 +1,15 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SVE Meta Tool</title>
+<link rel="stylesheet" href="/static/style.css"></head><body>
+{% set p = request.path %}
+<nav class="nav">
+  <span class="brand">SVE <span>Meta</span></span>
+  <a class="tab {{ 'active' if p == '/' or p.startswith('/collection') else '' }}" href="/collection">收藏</a>
+  <a class="tab {{ 'active' if p.startswith('/meta') else '' }}" href="/meta">Meta 總表</a>
+  <a class="tab {{ 'active' if p == '/ranking' else '' }}" href="/ranking">排行榜·補完</a>
+  <a class="tab {{ 'active' if p.startswith('/ranking2') else '' }}" href="/ranking2">排行榜·最省組建</a>
+</nav>
+<main class="container">{% block body %}{% endblock %}</main>
+<script src="/static/owned.js"></script>
+<script src="/static/app.js"></script></body></html>

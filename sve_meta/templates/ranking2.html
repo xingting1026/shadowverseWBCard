@@ -1,0 +1,26 @@
+{% extends "base.html" %}{% block body %}
+<h1>排行榜 · 最省組建</h1>
+{% if months %}
+<div class="months">
+  {% for m in months %}<a class="mchip {{ 'on' if m == sel else '' }}" href="?month={{ m }}">{{ m }}</a>{% endfor %}
+</div>
+{% endif %}
+<p class="hint">{{ sel or '—' }} 的<strong>第 1 名</strong>牌組，用卡片<strong>名稱</strong>取最便宜稀有度的價，加總整副（主＋進化）從零組建成本，由便宜到貴。「看單卡」會把卡換成同名最便宜的那張。</p>
+<table>
+  <thead><tr><th>#</th><th>全新組建成本</th><th>職業</th><th>活動</th><th>無價卡</th><th></th></tr></thead>
+  <tbody>
+  {% for d in ranked %}
+  <tr>
+    <td><span class="rankno">{{ loop.index }}</span></td>
+    <td class="cost">¥{{ "{:,}".format(d.cost) }}</td>
+    <td><span class="badge">{{ d.class }}</span></td>
+    <td>{{ d.event }}</td>
+    <td>{% if d.unpriced %}<span class="warn">{{ d.unpriced|length }} 張</span>{% else %}—{% endif %}</td>
+    <td><a href="/deck/{{ d.deck_code }}?cheapest=1">看單卡</a></td>
+  </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% if not ranked %}<p class="hint">這個月沒有第 1 名牌組資料，換個月份或先跑 <code>python scrape_meta.py</code>。</p>{% endif %}
+<p class="hint">※「無價卡」＝該卡名在價格庫查不到價（yuyu-tei 未收錄／未爬到／名稱對不上），<strong>沒被算進金額</strong>。</p>
+{% endblock %}

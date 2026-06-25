@@ -1,0 +1,50 @@
+{% extends "base.html" %}{% block body %}
+<h1>Meta 總表</h1>
+
+<form method="get" action="/meta" class="toolbar">
+  <label>檢視期間</label>
+  <input type="date" name="start" value="{{ start }}">
+  <span class="hint">～</span>
+  <input type="date" name="end" value="{{ end }}">
+  <input type="hidden" name="scope" value="{{ scope }}">
+  <button class="btn" type="submit">檢視</button>
+  <span class="hint">資料最早到 2024-05-01；要看歷史 meta 就把區間往前拉</span>
+</form>
+
+<div class="stats">
+  <div class="stat"><div class="num">{{ agg.total_events }}</div><div class="lbl">活動數</div></div>
+  <div class="stat"><div class="num">{{ agg.decks|length }}</div><div class="lbl">納入牌組</div></div>
+  <div class="stat"><div class="num">{{ agg.total_players }}</div><div class="lbl">總參賽</div></div>
+  <div class="stat"><div class="lbl">期間</div><div>{{ start }}<br>～ {{ end }}</div></div>
+</div>
+
+<div class="seg">
+  <a class="{{ 'on' if scope == 'top8' else '' }}" href="/meta?scope=top8&start={{ start }}&end={{ end }}">前 8 強</a>
+  <a class="{{ 'on' if scope == 'first' else '' }}" href="/meta?scope=first&start={{ start }}&end={{ end }}">僅第 1 名</a>
+</div>
+
+{% if pie %}
+<div class="pie-wrap">
+  <svg viewBox="0 0 220 220" width="220" height="220" aria-label="職業占比">
+    {% for s in pie %}<path d="{{ s.path }}" fill="{{ s.color }}" stroke="var(--bg)" stroke-width="1.5"></path>{% endfor %}
+  </svg>
+  <ul class="legend">
+    {% for s in pie %}<li><span class="sw" style="background:{{ s.color }}"></span>{{ s.label }} <span class="pc">{{ s.n }}（{{ s.pct }}%）</span></li>{% endfor %}
+  </ul>
+</div>
+{% else %}
+<p class="hint">此期間沒有資料。請在終端機跑 <code>python scrape_meta.py</code>（或指定 <code>--from/--to</code> 抓歷史）。</p>
+{% endif %}
+
+<h2>各場比賽 · 各隊組法</h2>
+<table>
+  <thead><tr><th>活動</th><th>店家</th><th>人數</th><th>名次／職業（點看單卡）</th></tr></thead>
+  <tbody>
+  {% for e in events %}
+  <tr><td>{{ e.title }}</td><td>{{ e.store }}</td><td>{{ e.players }}</td><td>
+  {% for r in e.rankings %}{% if r.deck_code %}<a class="chip" href="/deck/{{ r.deck_code }}">#{{ r.rank }} {{ r.class }}</a>{% else %}<span class="chip hidden-deck">#{{ r.rank }} {{ r.class }}·未公開</span>{% endif %}{% endfor %}
+  </td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

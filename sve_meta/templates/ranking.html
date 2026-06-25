@@ -1,0 +1,16 @@
+{% extends "base.html" %}{% block body %}
+<h1>排行榜 · 補完成本</h1>
+{% if months %}
+<div class="months">
+  {% for m in months %}<a class="mchip {{ 'on' if m == sel else '' }}" href="?month={{ m }}">{{ m }}</a>{% endfor %}
+</div>
+{% endif %}
+<p class="hint">{{ sel or '—' }} 的 meta 牌組，依「對照你的收藏（本機）還缺多少 × 價」由便宜到貴。即時計算，不上傳收藏。</p>
+<table>
+  <thead><tr><th>#</th><th>補完成本</th><th>職業</th><th>缺卡數</th><th></th></tr></thead>
+  <tbody id="rank-body"><tr><td colspan="5" class="hint">計算中…</td></tr></tbody>
+</table>
+{% if not data.decks %}<p class="hint">這個月沒有牌組資料，換個月份或先跑 <code>python scrape_meta.py</code>。</p>{% endif %}
+<p class="hint">※「無價」＝該卡名在價格庫查不到價，未計入金額。</p>
+<script id="rank-data" type="application/json">{{ data|tojson }}</script>
+{% endblock %}
