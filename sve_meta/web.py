@@ -181,6 +181,6 @@ def create_app(db_path=DB_PATH):
         card = cardmaster.get(conn(), card_number)
         img_rel = (card.get("img") or None) if card else None
         path = imgproxy.fetch_image(card_number, img=img_rel, cache_dir=IMG_CACHE_DIR)
-        return send_file(path, mimetype="image/png")
+        return send_file(path, mimetype="image/jpeg")
 
     return app

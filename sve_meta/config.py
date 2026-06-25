@@ -8,6 +8,7 @@ IMG_CACHE_DIR = ROOT / "img_cache"
 GAME_TITLE_ID_SVE = 6
 REQUEST_DELAY = 1.0    # 秒，爬蟲（Bushi-Navi/DeckLog/yuyu-tei/卡表）對外請求間隔
 IMG_FETCH_DELAY = 0.0  # 卡圖代理不套禮貌延遲：抓一次就永久快取，且頁面一次載很多張
+IMG_THUMB_WIDTH = 240  # 卡圖縮圖寬度（px）：抓回原圖縮成這個寬的 JPEG 再快取，省頻寬
 PRICE_TTL_SECONDS = 24 * 3600
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
