@@ -6,6 +6,12 @@ def test_candidates_try_hyphen_then_underscore():
     assert cands[0].endswith("/BP01/bp01-001.png")        # 新 set 連字號先試
     assert cands[1].endswith("/BP01/bp01_001.png")        # 舊 set 底線備援
 
+def test_candidates_strip_trailing_lowercase_folder():
+    # DSD01a-015 的圖在 DSD01/ 資料夾（去掉結尾小寫 a），不是 DSD01a/
+    cands = imgproxy.image_url_candidates("DSD01a-015")
+    assert cands[0].endswith("/DSD01a/dsd01a-015.png")              # 仍先試字面
+    assert any(u.endswith("/DSD01/dsd01a-015.png") for u in cands)  # 也試去尾小寫的資料夾
+
 def test_candidates_use_stored_img_when_given():
     cands = imgproxy.image_url_candidates("BP01-001", img="BP01/bp01_001.png")
     assert cands == [imgproxy.DECKLOG_IMG_BASE + "BP01/bp01_001.png"]

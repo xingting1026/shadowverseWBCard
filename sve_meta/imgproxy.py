@@ -1,5 +1,6 @@
 # sve_meta/imgproxy.py
 import io
+import re
 import time
 import requests
 from pathlib import Path
@@ -26,10 +27,15 @@ def image_url_candidates(card_number, img=None):
         return [DECKLOG_IMG_BASE + img.lstrip("/")]
     set_code = card_number.split("-")[0]
     stem = card_number.lower()
-    return [
-        f"{DECKLOG_IMG_BASE}{set_code}/{stem}.png",
-        f"{DECKLOG_IMG_BASE}{set_code}/{stem.replace('-', '_')}.png",
-    ]
+    folders = [set_code]
+    stripped = re.sub(r"[a-z]+$", "", set_code)     # DSD01a→DSD01（圖檔資料夾去掉結尾小寫）
+    if stripped and stripped != set_code:
+        folders.append(stripped)
+    urls = []
+    for f in folders:                               # 每個資料夾都試連字號與底線檔名
+        urls.append(f"{DECKLOG_IMG_BASE}{f}/{stem}.png")
+        urls.append(f"{DECKLOG_IMG_BASE}{f}/{stem.replace('-', '_')}.png")
+    return urls
 
 
 def _http_get(url, headers):
