@@ -1,13 +1,19 @@
-// ---- 懶載入：展開系列才載入該系列圖片 ----
-function sveLoadImgs(root) {
-  root.querySelectorAll("img[data-src]").forEach(img => {
-    img.src = img.dataset.src; img.removeAttribute("data-src");
-  });
-}
-document.querySelectorAll("details.set").forEach(d =>
-  d.addEventListener("toggle", () => { if (d.open) sveLoadImgs(d); }));
-document.querySelectorAll(".grid").forEach(g => {
-  if (!g.closest("details")) sveLoadImgs(g);          // 牌組頁等：直接載入
+// ---- 懶載入：只載入「快進到視窗」的卡圖；往下捲才載更多 ----
+// 收藏頁收合在 <details> 裡的圖（display:none）不會 intersecting，展開且捲到才載。
+const _imgIO = ("IntersectionObserver" in window)
+  ? new IntersectionObserver((entries, obs) => {
+      for (const e of entries) {
+        if (!e.isIntersecting) continue;
+        const img = e.target;
+        img.src = img.dataset.src;
+        img.removeAttribute("data-src");
+        obs.unobserve(img);
+      }
+    }, { rootMargin: "400px" })                          // 提前 400px 開始載
+  : null;
+document.querySelectorAll("img[data-src]").forEach(img => {
+  if (_imgIO) _imgIO.observe(img);
+  else { img.src = img.dataset.src; img.removeAttribute("data-src"); }  // 舊瀏覽器退回直接載
 });
 
 // ---- 收藏頁：計數器讀/寫 localStorage ----
