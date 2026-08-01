@@ -13,6 +13,7 @@ import json
 import time
 import shutil
 import datetime
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from . import byname, prices, events_store, tiering, cardmaster, imgproxy
 from .classmap import normalize_class
@@ -124,18 +125,28 @@ def _write_json(path, obj):
                     encoding="utf-8")
 
 
-def fetch_missing_images(conn, cns, cache_dir, delay=0.1, log=print):
-    """把還沒有縮圖的卡抓進 img_cache（禮貌間隔 delay 秒）。回傳新抓張數。"""
+def fetch_missing_images(conn, cns, cache_dir, delay=0.1, workers=4, log=print):
+    """把還沒有縮圖的卡抓進 img_cache。少量 worker 平行（每張圖網路延遲遠大於下載量），
+    每張之間仍留 delay 秒禮貌間隔。回傳新抓張數。
+    DB 查詢先在主執行緒做完，worker 只做 HTTP + 寫檔（sqlite 連線不跨執行緒）。"""
     cache_dir = Path(cache_dir)
     todo = [cn for cn in sorted(cns) if not (cache_dir / f"{cn}.jpg").exists()]
-    for i, cn in enumerate(todo):
+    if not todo:
+        return 0
+    imgs = {}
+    for cn in todo:
         card = cardmaster.get(conn, cn)
-        imgproxy.fetch_image(cn, img=(card.get("img") or None) if card else None,
-                             cache_dir=cache_dir)
+        imgs[cn] = (card.get("img") or None) if card else None
+
+    def one(cn):
+        imgproxy.fetch_image(cn, img=imgs[cn], cache_dir=cache_dir)
         if delay:
             time.sleep(delay)
-        if log and (i + 1) % 200 == 0:
-            log(f"  卡圖 {i + 1}/{len(todo)}")
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        for i, _ in enumerate(ex.map(one, todo)):
+            if log and (i + 1) % 200 == 0:
+                log(f"  卡圖 {i + 1}/{len(todo)}")
     return len(todo)
 
 
