@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "site-preview",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5000", "--directory", "site"],
+      "port": 5000
+    }
+  ]
+}

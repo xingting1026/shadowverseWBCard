@@ -1,63 +1,66 @@
-# SVE Meta 收藏差距工具
+# SVE Meta（靜態站 · GitHub Pages 每日自動更新）
 
-抓 Shadowverse Evolve 線下賽 meta、把每副入賞牌以**單張卡**呈現、對照我的收藏算出
-「差哪些卡」與「補完成本」，並依成本排序。Flask + SQLite。
+抓 Shadowverse Evolve 線下賽 meta，產出**純靜態網站**部署在 GitHub Pages，
+GitHub Actions **每天自動抓新賽果**、重新產站、自動部署。Python + SQLite（僅建站時用）。
 
-**收藏（擁有數量）只存在使用者的瀏覽器（localStorage），不上傳伺服器**；補完成本、
-缺卡、排行榜都在瀏覽器即時計算，所以可公開部署、每個訪客各看各的、不互相覆蓋。
+功能：
+1. **Meta 總表**：月份切換、前8強/僅第1名、職業圓餅、各場比賽各隊組法（點入看單卡）。
+2. **近期 Meta 牌組一覽**：近 30 天入賞牌組自動聚成「原型」、分 T0~T5 檔位，
+   每個原型附「共識牌表」（大家幾乎都帶的卡）、「彈性卡位」與實際範例牌組。
+3. **冠軍牌組·最省組件**：該月第 1 名牌組，以**同名最便宜印刷**計全新組建成本，由便宜到貴。
 
-詳細設計見 `docs/superpowers/specs/2026-06-23-sve-meta-collection-tool-design.md`。
+詳細設計見 `docs/superpowers/specs/`（原始工具設計 + 2026-08-01 靜態化設計）。
 
-## 部署（已可上線）
-- `sve_meta.db`（含卡表 / 價格 / 一年 meta）**有 commit 進版控**，部署後直接有資料。
-- 不能用 GitHub Pages（那是靜態）；用能跑 Python 的主機（Render / Railway / Fly.io）。
-- 啟動指令見 `Procfile`：`gunicorn "sve_meta.web:create_app()" --bind 0.0.0.0:$PORT`。
-- 例（Render）：New → Web Service → 連這個 repo → Build `pip install -r requirements.txt`、
-  Start `gunicorn "sve_meta.web:create_app()" --bind 0.0.0.0:$PORT`。
-- 註：多數平台檔案系統是暫時的，執行時抓的卡圖 / 新賽事不會永久保存（重啟後重抓）；
-  已 commit 的 `sve_meta.db` 仍在，所以歷史 meta 一直都在。
+## 部署（GitHub Pages，一次性設定）
+1. push 到 GitHub（repo 需為 public，或帳號有 Pages 私有 repo 權限）。
+2. Repo → Settings → Pages → **Source 選「GitHub Actions」**。
+3. Repo → Settings → Actions → General → Workflow permissions 選
+   **「Read and write permissions」**（每日更新要把 DB commit 回 repo）。
+4. 完成。`.github/workflows/update.yml` 會在每次 push 重新部署，
+   並在**每天 14:10 UTC（23:10 JST）**自動抓近 3 天新賽果 → 更新 → 部署。
+   也可到 Actions 頁籤手動 Run workflow。
 
-## 安裝
+網址：`https://<帳號>.github.io/<repo名>/`
+
+- `sve_meta.db`（卡表/價格/歷史 meta）與 `img_cache/`（卡圖縮圖）都 **commit 進版控**，
+  Actions 每天只增量更新，不會重抓全部。
+- 不往回補歷史；要回補時本機跑 `scrape_meta.py --from ... --by-month` 再 push。
+
+## 本機開發
 ```bash
-python3 -m venv .venv && . .venv/bin/activate
+python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+python run.py        # 產站（不抓圖）+ 預覽 http://localhost:5000
 ```
 
-## 首次初始化資料（一次性，會打官方站約 10+ 分鐘，請低頻）
+完整產站（含補抓缺少的卡圖縮圖）：
+```bash
+python build_site.py
+```
+
+## 抓比賽 meta（存進 sve_meta.db）
+Bushi-Navi 的 SVE 賽果最早回溯到 2024-05-01。
+```bash
+python scrape_meta.py                                   # 近 30 天、≥8 人（預設）
+python scrape_meta.py --days 14 --min 16
+python scrape_meta.py --from 2024-05-01 --to 2026-06-30 --by-month  # 逐月回補歷史
+```
+
+## 首次初始化卡表/價格（一次性，約 10+ 分鐘）
 ```bash
 python init_data.py    # 全 53 個 set：官方卡表（全分頁）+ yuyu-tei 價格
 ```
-`init_data.py` 容錯：單一 set 失敗不中斷，最後印出抓不到/無價的清單。可重跑
-（`INSERT OR REPLACE`），手動填過的價（`is_manual=1`）不會被覆蓋。只想灌特定 set
-就改 `init_data.py` 裡的 `SETS` 清單。
-
-## 抓比賽 meta（存進資料庫，跨重啟保留）
-Bushi-Navi 的 SVE 賽果**最早回溯到 2024-05-01**（約 2 年、3400+ 場），全部可爬。
-```bash
-python scrape_meta.py                                   # 近 30 天、≥8 人（預設）
-python scrape_meta.py --days 14 --min 16                # 近 14 天、≥16 人
-python scrape_meta.py --from 2024-05-01 --to 2024-12-31 --min 8     # 指定歷史區間
-python scrape_meta.py --from 2024-05-01 --to 2026-06-30 --by-month  # 逐月抓（做整段歷史推薦）
-```
-整段歷史很久（數十分鐘～數小時，每請求間隔 1 秒）。做歷史 meta 建議 `--by-month`
-（一個月一段、有進度、可隨時 Ctrl+C，已抓的月份會留著）或提高 `--min` 只收大賽。
-
-## 啟動
-```bash
-python run.py        # http://localhost:5000
-```
-
-## 使用
-1. **收藏**：系列收合，展開才載圖；各卡 ＋/− 記錄擁有數（0–3）。
-2. **Meta 總表**：選**檢視期間**（可拉到任意歷史月份）、切第1名/前8強、看職業圓餅圖、各場各隊組法。
-3. **牌組**：看單卡 + 缺卡標紅 + 補完成本。
-4. **排行榜·補完**：meta 牌組依「我的補完成本」由便宜到貴。
-5. **排行榜·最省組建**：該期間第1名牌組，用**卡名取最便宜稀有度**算全新組建成本，由便宜到貴。
 
 ## 測試
 ```bash
-. .venv/bin/activate && pytest -q
+pytest -q
 ```
+
+## 原型聚類（tiers）怎麼算
+- 同職業內，牌組以「卡名＋基本/進化」張數算 multiset Jaccard 相似度，≥0.5 視為同原型。
+- 原型名稱＝該群「出現率 × 職業內鑑別度」最高的 2 張特徵卡（不是社群俗名）。
+- 檔位分數＝視窗內入賞加權（冠軍3、亞軍2、四強1.5、八強1），
+  相對最強原型的比例切 T0~T5。參數都在 `sve_meta/tiering.py` 頂部常數。
 
 ## 資料來源（皆為 Bushiroad / 第三方，自用請狠快取、加 delay、勿高頻）
 - Bushi-Navi 賽果 API（`api-user.bushi-navi.com`，header `X-Accept-Version: v1`）

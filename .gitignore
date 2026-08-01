@@ -4,11 +4,13 @@ __pycache__/
 *.pyc
 .pytest_cache/
 
-# 卡圖快取（執行時自動重抓，不進版控）
-img_cache/
+# 產站輸出（GitHub Actions 會重新產，不進版控）
+site/
 
 # 系統 / 暫存
 .DS_Store
 *.output
 
-# 注意：sve_meta.db 故意「不」忽略 —— 要連同卡表/價格/一年 meta 一起 commit
+# 注意：sve_meta.db 與 img_cache/ 故意「不」忽略 ——
+# DB 含卡表/價格/歷史 meta；img_cache 是卡圖縮圖快取，
+# 兩者都 commit，GitHub Actions 每日增量更新才不用重抓。

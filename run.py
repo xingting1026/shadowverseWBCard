@@ -1,7 +1,16 @@
-from sve_meta.web import create_app
+"""本機預覽：先產站（不抓卡圖，快），再用內建 http.server 開在 http://localhost:5000。"""
+import functools
+import http.server
+from sve_meta import db, sitebuild
+from sve_meta.config import DB_PATH, IMG_CACHE_DIR, ROOT
 
 if __name__ == "__main__":
-    # create_app() 會在啟動時建表；
-    # use_reloader=False 避免熱重載清空 /api/fetch 的記憶體快取（EVENTS_CACHE）
-    # threaded=True：同時併發處理多張卡圖請求，不互相排隊
-    create_app().run(debug=True, port=5000, use_reloader=False, threaded=True)
+    conn = db.get_conn(DB_PATH)
+    db.init_db(conn)
+    site = ROOT / "site"
+    sitebuild.export_site(conn, site, IMG_CACHE_DIR, fetch_images=False)
+    conn.close()
+    handler = functools.partial(http.server.SimpleHTTPRequestHandler,
+                                directory=str(site))
+    print("預覽：http://localhost:5000 （Ctrl+C 結束）")
+    http.server.ThreadingHTTPServer(("127.0.0.1", 5000), handler).serve_forever()

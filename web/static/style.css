@@ -39,16 +39,7 @@ h2{font-size:1.1rem;margin:1.6rem 0 .6rem;color:var(--muted);font-weight:700}
 .stat .num{font-size:1.5rem;font-weight:800;color:var(--accent-2)}
 .stat .lbl{color:var(--muted);font-size:.78rem}
 
-/* ---- toolbar / forms ---- */
-.toolbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;
-  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  padding:.7rem .9rem;margin-bottom:1rem}
-.toolbar input{background:var(--surface2);border:1px solid var(--border);color:var(--text);
-  border-radius:8px;padding:.4rem .55rem;font:inherit}
-.toolbar label{color:var(--muted);font-size:.85rem}
-.btn{background:var(--accent);color:#1b1530;border:none;border-radius:8px;padding:.45rem .9rem;
-  font-weight:700;cursor:pointer;font:inherit}
-.btn:hover{filter:brightness(1.08)}
+/* ---- seg 切換 ---- */
 .seg{display:inline-flex;border:1px solid var(--border);border-radius:999px;overflow:hidden}
 .seg a{padding:.35rem .9rem;color:var(--muted);font-weight:600;font-size:.88rem}
 .seg a:hover{background:var(--surface2);text-decoration:none}
@@ -82,17 +73,6 @@ tr:first-child .rankno{background:var(--accent-2);color:#2a1f00}
 .chip.hidden-deck{opacity:.55}
 .warn{color:var(--danger)}
 
-/* ---- accordion (collection by set) ---- */
-details.set{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-  margin:.5rem 0;overflow:hidden}
-details.set>summary{cursor:pointer;list-style:none;padding:.7rem 1rem;font-weight:700;
-  display:flex;justify-content:space-between;align-items:center}
-details.set>summary::-webkit-details-marker{display:none}
-details.set>summary::after{content:"▸";color:var(--muted);transition:transform .15s}
-details.set[open]>summary::after{transform:rotate(90deg)}
-details.set>summary:hover{background:var(--surface2)}
-details.set .grid{padding:.6rem 1rem 1rem}
-
 /* ---- card tiles ---- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:.7rem}
 .card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:.45rem;
@@ -103,16 +83,6 @@ details.set .grid{padding:.6rem 1rem 1rem}
 .card .name{color:var(--text);min-height:2.3em;margin:.1rem 0;line-height:1.25}
 .card .price{color:var(--accent-2);font-weight:700}
 .card.missing{border-color:var(--danger);box-shadow:0 0 0 1px var(--danger),0 0 14px rgba(255,107,125,.3)}
-.card.missing .code::after{content:" ·缺";color:var(--danger)}
-
-/* ---- counter pill ---- */
-.counter{display:inline-flex;align-items:center;gap:.1rem;margin-top:.3rem;
-  background:var(--bg);border:1px solid var(--border);border-radius:999px;padding:.1rem}
-.counter button{width:1.5rem;height:1.5rem;border:none;background:transparent;color:var(--text);
-  font-size:1rem;cursor:pointer;border-radius:50%}
-.counter button:hover{background:var(--accent);color:#1b1530}
-.counter .qty{min-width:1.1rem;text-align:center;font-weight:800}
-.counter[data-q="0"] .qty{color:var(--muted)}
 
 /* ---- 月份切換膠囊 ---- */
 .months{display:flex;flex-wrap:wrap;gap:.4rem;margin:.2rem 0 1rem}
@@ -122,10 +92,23 @@ details.set .grid{padding:.6rem 1rem 1rem}
 .mchip:hover{background:var(--surface2);color:var(--text);text-decoration:none}
 .mchip.on{background:var(--accent);color:#1b1530;border-color:var(--accent)}
 
-/* ---- 次要按鈕 / 檔案輸入 ---- */
-.btn-ghost{padding:.4rem .8rem;border-radius:8px;border:1px solid var(--border);
-  background:transparent;color:var(--text);font-size:.88rem;font-weight:600}
-.btn-ghost:hover{background:var(--surface2);text-decoration:none}
-.toolbar input[type=file]{color:var(--muted);font-size:.85rem;max-width:230px}
-.toolbar input[type=file]::file-selector-button{background:var(--surface2);color:var(--text);
-  border:1px solid var(--border);border-radius:8px;padding:.3rem .6rem;margin-right:.5rem;cursor:pointer}
+/* ---- 近期 Meta 牌組一覽（tiers）---- */
+.tier-sec{margin:1.4rem 0}
+.tier-head{display:flex;align-items:center;gap:.7rem;margin-bottom:.6rem}
+.tier-tag{display:inline-flex;align-items:center;justify-content:center;
+  min-width:3rem;padding:.2rem .6rem;border-radius:10px;font-weight:900;font-size:1.05rem;
+  background:var(--surface2);border:1px solid var(--border)}
+.tier-tag.t0{background:#ffcf66;color:#2a1f00;border-color:#ffcf66}
+.tier-tag.t1{background:#c9a2ff;color:#20123a;border-color:#c9a2ff}
+.tier-tag.t2{background:#7fd9c1;color:#062a20;border-color:#7fd9c1}
+.tier-tag.t3{background:#8fb7ff;color:#0c1c3a;border-color:#8fb7ff}
+.tier-tag.t4{background:var(--surface2);color:var(--text)}
+.tier-tag.t5{background:var(--surface2);color:var(--muted)}
+.cluster{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:.8rem 1rem;margin:.5rem 0}
+.cluster-title{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap}
+.cluster-title strong{font-size:1.02rem}
+.cluster details{margin-top:.5rem}
+.cluster details>summary{cursor:pointer;color:var(--muted);font-size:.85rem;font-weight:600}
+.cluster details>summary:hover{color:var(--text)}
+.cluster .grid{margin:.4rem 0 .8rem}
