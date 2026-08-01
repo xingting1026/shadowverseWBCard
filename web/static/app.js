@@ -211,6 +211,7 @@ async function pageTiers() {
 
 function clusterHTML(c) {
   const grid = rows => rows.map(r => cardTile(r.cn, r.name,
+    `<div class="code">${esc(r.cn)}</div>` +
     `<div class="code">×${r.num} · ${Math.round(r.p * 100)}%帶</div>`)).join("");
   const mainN = c.consensus.main.reduce((a, r) => a + r.num, 0);
   const evoN = c.consensus.evo.reduce((a, r) => a + r.num, 0);
