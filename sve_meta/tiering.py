@@ -14,7 +14,7 @@ from collections import Counter
 from . import byname
 from .classmap import normalize_class
 
-WINDOW_DAYS = 30          # 視窗：最新賽事日往回幾天
+WINDOW_DAYS = 15          # 視窗：最新賽事日往回幾天（短一點對版本更迭較靈敏）
 SIM_THRESHOLD = 0.5       # multiset Jaccard ≥ 此值視為同原型
 MIN_CLUSTER_SIZE = 2      # 樣本數低於此的群歸入「其他」不列檔位
 SIGNATURE_TOP = 2         # 命名用幾張特徵卡
