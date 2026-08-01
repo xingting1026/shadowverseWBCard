@@ -1,6 +1,16 @@
 // SVE Meta 靜態站前端：依 body[data-page] 分派，資料全部來自 data/*.json。
-const PALETTE = ["#e6194b", "#3cb44b", "#ffe119", "#4363d8", "#f58231",
-                 "#911eb4", "#46f0f0", "#f032e6", "#808080", "#9a6324"];
+// 職業固定色（圓餅/圖例用）；沒列到的職業（聯動等）用後備色輪流配
+const CLASS_COLORS = {
+  "ウィッチ": "#4363d8",      // 藍
+  "ナイトメア": "#e6194b",    // 紅
+  "ドラゴン": "#f58231",      // 橘
+  "ロイヤル": "#ffe119",      // 黃
+  "ビショップ": "#f2f0e6",    // 白
+  "エルフ": "#3cb44b",        // 綠
+  "ネメシス": "#46f0f0",      // 青
+  "ニュートラル": "#9b97b4",  // 灰
+};
+const PALETTE = ["#911eb4", "#f032e6", "#9a6324", "#808080", "#57d9a3"];
 const P = new URLSearchParams(location.search);
 const esc = s => String(s ?? "").replace(/[&<>"]/g,
   c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -46,10 +56,10 @@ function pieHTML(counts) {
   if (!total) return "";
   const items = Object.entries(counts).sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1));
   const cx = 110, cy = 110, r = 100;
-  let start = -90, paths = "", legend = "";
-  items.forEach(([label, n], i) => {
+  let start = -90, paths = "", legend = "", fb = 0;
+  items.forEach(([label, n]) => {
     const frac = n / total, end = start + frac * 360;
-    const color = PALETTE[i % PALETTE.length];
+    const color = CLASS_COLORS[label] || PALETTE[fb++ % PALETTE.length];
     let d;
     if (frac >= 0.99999) {
       d = `M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${2 * r} 0 a ${r} ${r} 0 1 0 ${-2 * r} 0 Z`;
