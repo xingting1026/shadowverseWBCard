@@ -12,6 +12,7 @@
 import json
 import time
 import shutil
+import hashlib
 import datetime
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -119,6 +120,21 @@ def _used_card_numbers(month_datas, tiers):
     return used
 
 
+def _stamp_assets(out):
+    """HTML 裡的 css/js 連結加上內容雜湊（?v=xxx）破快取：
+    GitHub Pages/瀏覽器會快取靜態資產，改版後舊 JS 可能繼續用；
+    內容一變雜湊就變，瀏覽器視為新網址立即重抓。"""
+    for name in ("static/style.css", "static/app.js"):
+        p = out / name
+        if not p.exists():
+            continue
+        v = hashlib.md5(p.read_bytes()).hexdigest()[:10]
+        for html in out.glob("*.html"):
+            s = html.read_text(encoding="utf-8")
+            html.write_text(s.replace(f'"{name}"', f'"{name}?v={v}"'),
+                            encoding="utf-8")
+
+
 def _write_json(path, obj):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")),
@@ -186,6 +202,7 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
 
     # 靜態頁 + 卡圖進 site/
     shutil.copytree(web_src, out, dirs_exist_ok=True)
+    _stamp_assets(out)
     img_out = out / "img"
     img_out.mkdir(parents=True, exist_ok=True)
     copied = 0
