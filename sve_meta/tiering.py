@@ -84,22 +84,23 @@ def _split_identity(key):
     return nm, flag == "E"
 
 
-def signature_names(cluster_vecs, class_vecs, top=SIGNATURE_TOP):
-    """群的特徵卡名：群內出現率 × 職業內鑑別度（IDF）最高的『基本』卡。
-    出現率 < 0.5 的卡不拿來命名（那是彈性卡不是核心卡）。"""
-    n_cluster, n_class = len(cluster_vecs), len(class_vecs)
+def signature_names(cluster_vecs, all_vecs, top=SIGNATURE_TOP):
+    """群的特徵卡名：群內出現率 × 全場鑑別度（IDF）最高的『基本』卡。
+    IDF 用全場（跨職業）當分母，中立萬用卡（大家都帶）才壓得下去，
+    不會三個職業的原型都叫同一張中立卡。出現率 < 0.5 的卡不拿來命名。"""
+    n_cluster, n_all = len(cluster_vecs), len(all_vecs)
     presence = Counter()
     for v in cluster_vecs:
         presence.update({k for k in v if not _split_identity(k)[1]})
     df = Counter()
-    for v in class_vecs:
+    for v in all_vecs:
         df.update({k for k in v if not _split_identity(k)[1]})
     scored = []
     for k, c in presence.items():
         p = c / n_cluster
         if p < 0.5:
             continue
-        idf = math.log((n_class + 1) / (df[k] + 1)) + 0.1   # +0.1：全職業都帶也至少留出現率序
+        idf = math.log((n_all + 1) / (df[k] + 1)) + 0.1   # +0.1：全場都帶也至少留出現率序
         scored.append((p * idf, p, _split_identity(k)[0]))
     scored.sort(key=lambda t: (-t[0], -t[1], t[2]))
     return [nm for _, _, nm in scored[:top]]
@@ -175,6 +176,7 @@ def build_tiers(events, nmap, tmap, window_days=WINDOW_DAYS):
 
     clusters = []
     others_clusters = others_decks = 0
+    all_vecs = [e["vec"] for e in entries]
     for cls, group in by_class.items():
         vecs = [e["vec"] for e in group]
         for idxs in _cluster_indices(vecs):
@@ -185,7 +187,7 @@ def build_tiers(events, nmap, tmap, window_days=WINDOW_DAYS):
                 continue
             score = sum(rank_weight(m["rank"]) for m in members)
             wins = sum(1 for m in members if m["rank"] == 1)
-            sig = signature_names([m["vec"] for m in members], vecs)
+            sig = signature_names([m["vec"] for m in members], all_vecs)
             main_c, main_f = _consensus_section(
                 [m["list"] for m in members], nmap, tmap, False, len(members))
             evo_c, evo_f = _consensus_section(

@@ -38,6 +38,11 @@ jobs:
         if: github.event_name != 'push'
         run: python scrape_meta.py --days 7
 
+      # 新彈自我修復：牌組出現卡表沒有的 set（如 BP21）就補官方卡表+價格，並刷新近期價格
+      - name: 補新彈卡表與價格（僅排程時）
+        if: github.event_name != 'push'
+        run: python update_sets.py
+
       - name: 產靜態站（含補抓新卡圖）
         run: python build_site.py
 
