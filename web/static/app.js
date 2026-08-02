@@ -231,62 +231,99 @@ function clusterHTML(c) {
     </details></div>`;
 }
 
-// ================= 卡片查詢 =================
+// ================= 卡片查詢（以卡名為單位，不分印刷）=================
+// 同名卡的代表印刷：優先非進化、卡號最小（通常是本體印刷而非閃卡/異畫）
+function representativeCn(cns, cards) {
+  return cns.slice().sort((a, b) =>
+    ((cards[a] || [])[2] || 0) - ((cards[b] || [])[2] || 0) ||
+    (a < b ? -1 : 1))[0];
+}
+
 async function pageSearch() {
   const form = document.getElementById("form"), input = document.getElementById("q");
   form.onsubmit = e => {
     e.preventDefault();
     location.search = "?q=" + encodeURIComponent(input.value.trim());
   };
-  const q = (P.get("q") || "").trim();
+  const exact = (P.get("n") || "").trim();          // 內部連結用：卡名精確查
+  const q = exact || (P.get("q") || "").trim();
   if (!q) return;
   input.value = q;
   const out = document.getElementById("result");
   out.innerHTML = `<p class="hint">查詢中…</p>`;
   const cards = await J("data/cards.json");
 
-  // 長得像卡號（含 "-"）→ 精確查；否則當卡名做部分比對
-  if (q.includes("-")) {
-    const cn = Object.keys(cards).find(k => k.toLowerCase() === q.toLowerCase()) || q;
-    await renderUsage(out, cn, cards);
+  // 1) 卡號 → 反查名字；2) 名字（精確或模糊）→ 唯一命中直接查、多命中列名字選單
+  let name = null;
+  if (!exact && q.includes("-")) {
+    const cn = Object.keys(cards).find(k => k.toLowerCase() === q.toLowerCase());
+    if (!cn) {
+      out.innerHTML = `<p class="hint">查無卡號「${esc(q)}」（只收錄入賞牌組用過的卡）。</p>`;
+      return;
+    }
+    name = cards[cn][0];
   } else {
-    const hits = Object.entries(cards)
-      .filter(([, [name]]) => name && name.includes(q))
-      .sort((a, b) => a[0] < b[0] ? -1 : 1);
-    if (!hits.length) {
+    const names = new Set(
+      Object.values(cards).map(v => v[0])
+            .filter(nm => nm && (exact ? nm === q : nm.includes(q))));
+    if (!names.size) {
       out.innerHTML = `<p class="hint">沒有找到卡名含「${esc(q)}」的卡（只收錄入賞牌組用過的卡）。</p>`;
       return;
     }
-    out.innerHTML = `<h2>卡名符合的卡（${hits.length} 張，點卡查用它的冠軍牌組）</h2>
-      <div class="grid">` + hits.map(([cn, [name]]) =>
-        `<a href="?q=${encodeURIComponent(cn)}" style="text-decoration:none">` +
-        cardTile(cn, name, `<div class="code">${esc(cn)}</div>`) + `</a>`).join("") +
-      `</div>`;
-    lazyImgs(out);
+    if (names.size > 1) {          // 多個不同卡名 → 每個名字一張代表卡，點了再查
+      const list = [...names].sort().map(nm => {
+        const cns = Object.keys(cards).filter(cn => cards[cn][0] === nm);
+        const rep = representativeCn(cns, cards);
+        return `<a href="?n=${encodeURIComponent(nm)}" style="text-decoration:none">` +
+          cardTile(rep, nm, `<div class="code">${cns.length} 種印刷</div>`) + `</a>`;
+      }).join("");
+      out.innerHTML = `<h2>符合的卡名（${names.size} 個，點卡查用它的冠軍牌組）</h2>
+        <div class="grid">${list}</div>`;
+      lazyImgs(out);
+      return;
+    }
+    name = [...names][0];
   }
+  await renderUsageByName(out, name, cards);
 }
 
-async function renderUsage(out, cn, cards) {
-  const [name] = cards[cn] || [null];
-  let usage = null;
-  try {
-    usage = await J(`data/usage/${encodeURIComponent(cn.split("-")[0])}.json`);
-  } catch (e) { /* 該 set 沒有任何冠軍使用紀錄 → 檔案不存在 */ }
-  const rows = (usage && usage[cn]) || [];
+async function renderUsageByName(out, name, cards) {
+  const cns = Object.keys(cards).filter(cn => cards[cn][0] === name);
+  const sets = [...new Set(cns.map(cn => cn.split("-")[0]))];
+  const usages = await Promise.all(sets.map(s =>
+    J(`data/usage/${encodeURIComponent(s)}.json`).catch(() => ({}))));
+  const merged = new Map();      // 月份|牌組碼 → 合併所有印刷的張數（基本/進化分計）
+  usages.forEach(u => {
+    for (const cn of cns) {
+      const evo = (cards[cn] || [])[2] === 1;
+      for (const [m, code, event, date, players, num] of (u[cn] || [])) {
+        const k = m + "|" + code;
+        const e = merged.get(k) ||
+          { m, code, event, date, players, main: 0, evo: 0 };
+        e[evo ? "evo" : "main"] += num;
+        merged.set(k, e);
+      }
+    }
+  });
+  const rows = [...merged.values()].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const rep = representativeCn(cns, cards);
   const head = `<div class="grid" style="max-width:140px;margin:.6rem 0">` +
-    cardTile(cn, name || cn, `<div class="code">${esc(cn)}</div>`) + `</div>`;
+    cardTile(rep, name, `<div class="code">${cns.length} 種印刷</div>`) + `</div>
+    <p class="hint">已合併「${esc(name)}」的所有印刷（閃卡／異畫視為同一張卡）。</p>`;
   if (!rows.length) {
-    out.innerHTML = head + `<p class="hint">${name ? "" : "查無此卡號，或"}沒有第 1 名牌組用過這張卡。</p>`;
+    out.innerHTML = head + `<p class="hint">沒有第 1 名牌組用過這張卡。</p>`;
     lazyImgs(out);
     return;
   }
+  const copies = e => (e.main ? `×${e.main}` : "") +
+    (e.evo ? `${e.main ? "，" : ""}進化×${e.evo}` : "");
   out.innerHTML = head +
     `<h2>用過它的冠軍牌組（${rows.length} 副，新到舊）</h2>
     <table><thead><tr><th>日期</th><th>活動</th><th>人數</th><th>帶幾張</th><th></th></tr></thead>
-    <tbody>` + rows.map(([m, code, event, date, players, num]) => `<tr>
-      <td>${esc(date)}</td><td>${esc(event)}</td><td>${players}</td>
-      <td>×${num}</td>
-      <td><a href="${deckLink(m, code)}">看單卡</a></td></tr>`).join("") +
+    <tbody>` + rows.map(e => `<tr>
+      <td>${esc(e.date)}</td><td>${esc(e.event)}</td><td>${e.players}</td>
+      <td>${copies(e)}</td>
+      <td><a href="${deckLink(e.m, e.code)}">看單卡</a></td></tr>`).join("") +
     `</tbody></table>`;
   lazyImgs(out);
 }

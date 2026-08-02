@@ -211,8 +211,10 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
 
     used = _used_card_numbers(month_datas, tiers)
     price_table = prices.get_all(conn)
+    # [卡名, 單價, 是否進化卡]——進化旗標讓前端按名字合併使用紀錄時，基本/進化分開計
     _write_json(out / "data" / "cards.json",
-                {cn: [nmap.get(cn, cn), price_table.get(cn)] for cn in used})
+                {cn: [nmap.get(cn, cn), price_table.get(cn),
+                      1 if byname.is_evolve(tmap.get(cn)) else 0] for cn in used})
 
     usage = build_usage_index(month_datas)
     for set_code, by_cn in usage.items():

@@ -80,7 +80,8 @@ def test_export_site_writes_all_files(conn, tmp_path):
     tiers = json.loads((out / "data" / "tiers.json").read_text(encoding="utf-8"))
     assert tiers["total_decks"] == 1        # 只有 1 副公開 → 全進 others
     cards = json.loads((out / "data" / "cards.json").read_text(encoding="utf-8"))
-    assert cards["BP01-101"] == ["火龍", 100]   # 最省替換用到的印刷也在卡表裡
+    assert cards["BP01-101"] == ["火龍", 100, 0]   # 最省替換用到的印刷也在卡表裡
+    assert cards["BP01-E01"] == ["火龍", 200, 1]   # 進化卡帶旗標
     assert (out / "index.html").exists()
     assert (out / "img" / "BP01-101.jpg").exists()
     # 卡片查詢索引：冠軍 DK1 用了 BP01-001×3（主）與 BP01-E01×2（進化）
