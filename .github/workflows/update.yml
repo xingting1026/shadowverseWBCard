@@ -2,8 +2,10 @@
 name: daily-update
 
 on:
-  schedule:
-    - cron: "10 14 * * *"   # 每日 14:10 UTC = 23:10 JST（當天賽果多已上傳）
+  schedule:                  # 一天三次（UTC）；台灣時間 = UTC+8
+    - cron: "0 10 * * *"    # 台灣 18:00
+    - cron: "0 12 * * *"    # 台灣 20:00
+    - cron: "10 14 * * *"   # 台灣 22:10（日本 23:10，當天賽果多已上傳）
   push:
     branches: [main]
   workflow_dispatch: {}
