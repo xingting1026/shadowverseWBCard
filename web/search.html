@@ -1,19 +1,23 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>牌組</title>
+<title>卡片查詢</title>
 <link rel="stylesheet" href="static/style.css"></head>
-<body data-page="deck">
+<body data-page="search">
 <nav class="nav">
   <span class="brand">SVE <span>Meta</span></span>
   <a class="tab" href="index.html">Meta 總表</a>
   <a class="tab" href="tiers.html">近期 Meta 牌組一覽</a>
   <a class="tab" href="champions.html">冠軍牌組·最省組件</a>
-  <a class="tab" href="search.html">卡片查詢</a>
+  <a class="tab active" href="search.html">卡片查詢</a>
 </nav>
 <main class="container">
-<h1 id="title">牌組</h1>
-<div class="stats" id="stats"></div>
-<p class="hint" id="note"></p>
-<div id="sections"></div>
+<h1>卡片查詢</h1>
+<form class="toolbar" id="form">
+  <label>卡號或卡名</label>
+  <input type="text" id="q" placeholder="例：BP15-034 或 ガルミーユ" size="28">
+  <button class="btn" type="submit">查詢</button>
+  <span class="hint">查這張卡被哪些「第 1 名」牌組使用過（依日期新到舊）</span>
+</form>
+<div id="result"></div>
 </main>
 <script src="static/app.js"></script></body></html>

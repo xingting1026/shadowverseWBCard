@@ -83,3 +83,23 @@ def test_export_site_writes_all_files(conn, tmp_path):
     assert cards["BP01-101"] == ["火龍", 100]   # 最省替換用到的印刷也在卡表裡
     assert (out / "index.html").exists()
     assert (out / "img" / "BP01-101.jpg").exists()
+    # 卡片查詢索引：冠軍 DK1 用了 BP01-001×3（主）與 BP01-E01×2（進化）
+    usage = json.loads((out / "data" / "usage" / "BP01.json").read_text(encoding="utf-8"))
+    assert usage["BP01-001"] == [["2026-06", "DK1", "殿堂賽", "2026-06-15", 16, 3]]
+    assert usage["BP01-E01"][0][5] == 2
+
+
+def test_build_usage_index_sorted_desc_and_champions_only():
+    month_datas = [{
+        "month": "2026-05",
+        "decks": {"A": {"cls": "ドラゴン", "main": [["X-001", 3]], "evo": []},
+                  "B": {"cls": "ドラゴン", "main": [["X-001", 2]], "evo": []}},
+        "champions": [
+            {"code": "A", "event": "會A", "date": "2026-05-01", "players": 10},
+            {"code": "B", "event": "會B", "date": "2026-05-20", "players": 30}],
+        "cheapest": {},
+    }]
+    usage = sitebuild.build_usage_index(month_datas)
+    rows = usage["X"]["X-001"]
+    assert [r[1] for r in rows] == ["B", "A"]      # 日期新到舊
+    assert rows[0][5] == 2 and rows[1][5] == 3     # 各自的張數

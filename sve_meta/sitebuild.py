@@ -120,6 +120,30 @@ def _used_card_numbers(month_datas, tiers):
     return used
 
 
+def build_usage_index(month_datas):
+    """卡片查詢用的反向索引：卡號 → 用過它的『第 1 名』牌組清單。
+    依 set 拆檔（查一張卡只需下載該 set 的小 JSON）。
+    回傳 {set_code: {cn: [[月份, 牌組碼, 活動, 日期, 人數, 張數], ...]}}，
+    每張卡的清單按日期新到舊。"""
+    usage = {}
+    for md in month_datas:
+        for ch in md["champions"]:
+            deck = md["decks"].get(ch["code"])
+            if not deck:
+                continue
+            copies = {}
+            for cn, num in deck["main"] + deck["evo"]:
+                copies[cn] = copies.get(cn, 0) + num
+            for cn, num in copies.items():
+                usage.setdefault(cn.split("-")[0], {}).setdefault(cn, []).append(
+                    [md["month"], ch["code"], ch["event"], ch["date"],
+                     ch["players"], num])
+    for by_cn in usage.values():
+        for rows in by_cn.values():
+            rows.sort(key=lambda r: r[3], reverse=True)
+    return usage
+
+
 def _stamp_assets(out):
     """HTML 裡的 css/js 連結加上內容雜湊（?v=xxx）破快取：
     GitHub Pages/瀏覽器會快取靜態資產，改版後舊 JS 可能繼續用；
@@ -189,6 +213,10 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
     price_table = prices.get_all(conn)
     _write_json(out / "data" / "cards.json",
                 {cn: [nmap.get(cn, cn), price_table.get(cn)] for cn in used})
+
+    usage = build_usage_index(month_datas)
+    for set_code, by_cn in usage.items():
+        _write_json(out / "data" / "usage" / f"{set_code}.json", by_cn)
 
     _write_json(out / "data" / "index.json",
                 {"generated_at": datetime.datetime.now(datetime.timezone.utc)

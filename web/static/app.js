@@ -231,9 +231,70 @@ function clusterHTML(c) {
     </details></div>`;
 }
 
+// ================= 卡片查詢 =================
+async function pageSearch() {
+  const form = document.getElementById("form"), input = document.getElementById("q");
+  form.onsubmit = e => {
+    e.preventDefault();
+    location.search = "?q=" + encodeURIComponent(input.value.trim());
+  };
+  const q = (P.get("q") || "").trim();
+  if (!q) return;
+  input.value = q;
+  const out = document.getElementById("result");
+  out.innerHTML = `<p class="hint">查詢中…</p>`;
+  const cards = await J("data/cards.json");
+
+  // 長得像卡號（含 "-"）→ 精確查；否則當卡名做部分比對
+  if (q.includes("-")) {
+    const cn = Object.keys(cards).find(k => k.toLowerCase() === q.toLowerCase()) || q;
+    await renderUsage(out, cn, cards);
+  } else {
+    const hits = Object.entries(cards)
+      .filter(([, [name]]) => name && name.includes(q))
+      .sort((a, b) => a[0] < b[0] ? -1 : 1);
+    if (!hits.length) {
+      out.innerHTML = `<p class="hint">沒有找到卡名含「${esc(q)}」的卡（只收錄入賞牌組用過的卡）。</p>`;
+      return;
+    }
+    out.innerHTML = `<h2>卡名符合的卡（${hits.length} 張，點卡查用它的冠軍牌組）</h2>
+      <div class="grid">` + hits.map(([cn, [name]]) =>
+        `<a href="?q=${encodeURIComponent(cn)}" style="text-decoration:none">` +
+        cardTile(cn, name, `<div class="code">${esc(cn)}</div>`) + `</a>`).join("") +
+      `</div>`;
+    lazyImgs(out);
+  }
+}
+
+async function renderUsage(out, cn, cards) {
+  const [name] = cards[cn] || [null];
+  let usage = null;
+  try {
+    usage = await J(`data/usage/${encodeURIComponent(cn.split("-")[0])}.json`);
+  } catch (e) { /* 該 set 沒有任何冠軍使用紀錄 → 檔案不存在 */ }
+  const rows = (usage && usage[cn]) || [];
+  const head = `<div class="grid" style="max-width:140px;margin:.6rem 0">` +
+    cardTile(cn, name || cn, `<div class="code">${esc(cn)}</div>`) + `</div>`;
+  if (!rows.length) {
+    out.innerHTML = head + `<p class="hint">${name ? "" : "查無此卡號，或"}沒有第 1 名牌組用過這張卡。</p>`;
+    lazyImgs(out);
+    return;
+  }
+  out.innerHTML = head +
+    `<h2>用過它的冠軍牌組（${rows.length} 副，新到舊）</h2>
+    <table><thead><tr><th>日期</th><th>活動</th><th>人數</th><th>帶幾張</th><th></th></tr></thead>
+    <tbody>` + rows.map(([m, code, event, date, players, num]) => `<tr>
+      <td>${esc(date)}</td><td>${esc(event)}</td><td>${players}</td>
+      <td>×${num}</td>
+      <td><a href="${deckLink(m, code)}">看單卡</a></td></tr>`).join("") +
+    `</tbody></table>`;
+  lazyImgs(out);
+}
+
 // ---- dispatch ----
 const page = document.body.dataset.page;
-({ meta: pageMeta, champions: pageChampions, deck: pageDeck, tiers: pageTiers }[page] || (() => {}))()
+({ meta: pageMeta, champions: pageChampions, deck: pageDeck, tiers: pageTiers,
+   search: pageSearch }[page] || (() => {}))()
   .catch(e => {
     const el = document.createElement("p");
     el.className = "hint warn";
