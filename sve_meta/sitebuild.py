@@ -170,7 +170,9 @@ def fetch_missing_images(conn, cns, cache_dir, delay=0.1, workers=4, log=print):
     每張之間仍留 delay 秒禮貌間隔。回傳新抓張數。
     DB 查詢先在主執行緒做完，worker 只做 HTTP + 寫檔（sqlite 連線不跨執行緒）。"""
     cache_dir = Path(cache_dir)
-    todo = [cn for cn in sorted(cns) if not (cache_dir / f"{cn}.jpg").exists()]
+    todo = [cn for cn in sorted(cns)
+            if not (cache_dir / f"{cn}.jpg").exists()
+            or imgproxy.is_placeholder(cache_dir / f"{cn}.jpg")]  # 佔位圖每天重試
     if not todo:
         return 0
     imgs = {}
@@ -239,7 +241,9 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
     for cn in used:
         src = Path(img_cache_dir) / f"{cn}.jpg"
         dst = img_out / f"{cn}.jpg"
-        if src.exists() and not dst.exists():
+        # 佔位圖事後補成真圖時內容會變，所以比大小決定要不要重複製
+        if src.exists() and (not dst.exists()
+                             or dst.stat().st_size != src.stat().st_size):
             shutil.copy2(src, dst)
             copied += 1
     if log:

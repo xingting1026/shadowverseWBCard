@@ -20,6 +20,14 @@ def _make_placeholder():
 _PLACEHOLDER = _make_placeholder()
 
 
+def is_placeholder(path):
+    """此快取檔是否為「抓不到圖」的灰卡佔位圖（每天重試的依據）。"""
+    try:
+        return Path(path).read_bytes() == _PLACEHOLDER
+    except OSError:
+        return False
+
+
 def image_url_candidates(card_number, img=None):
     """要嘗試的卡圖 URL 清單。有官方頁記錄的相對路徑 img 就只用它；
     否則自行組——檔名小寫，新舊 set 分隔符不同（新 bp07-001 / 舊 bp01_001）兩種都試。"""
@@ -64,12 +72,13 @@ def _thumb(data):
 
 
 def fetch_image(card_number, img=None, cache_dir=IMG_CACHE_DIR, getter=_http_get):
-    """帶 Referer 抓官方卡圖 → 縮成 JPEG 縮圖 → 存磁碟快取（命中就不再抓）。
+    """帶 Referer 抓官方卡圖 → 縮成 JPEG 縮圖 → 存磁碟快取。
+    真圖命中就不再抓；快取的是佔位圖則重試（官方晚上圖的新卡才補得回來）。
     依序試候選 URL，全失敗就快取小灰卡佔位（不丟例外）。"""
     cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
     path = cache_dir / f"{card_number}.jpg"
-    if path.exists():
+    if path.exists() and not is_placeholder(path):
         return path
     headers = {"User-Agent": USER_AGENT, "Referer": DECKLOG_IMG_REFERER}
     for url in image_url_candidates(card_number, img):
