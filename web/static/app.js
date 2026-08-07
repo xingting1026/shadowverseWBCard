@@ -78,18 +78,69 @@ function pieHTML(counts) {
 const deckLink = (m, code, cheapest) =>
   `deck.html?m=${m}&code=${encodeURIComponent(code)}${cheapest ? "&cheapest=1" : ""}`;
 
+// 職業色點 + 標籤底色（找職業時好掃視）；沒固定色的職業（聯動/雙職業）維持原樣
+const clsDot = cls => CLASS_COLORS[cls]
+  ? `<span class="cdot" style="background:${CLASS_COLORS[cls]}"></span>` : "";
+const clsTint = cls => CLASS_COLORS[cls]
+  ? ` style="border-color:${CLASS_COLORS[cls]}66;background:${CLASS_COLORS[cls]}1c"` : "";
+const clsBadge = cls =>
+  `<span class="badge"${clsTint(cls)}>${clsDot(cls)}${esc(cls)}</span>`;
+
 // ================= Meta 總表 =================
 async function pageMeta() {
   const idx = await J("data/index.json");
-  const m = P.get("m") || idx.latest;
   const scope = P.get("scope") === "first" ? "first" : "top8";
-  monthChips(document.getElementById("months"), idx.months, m, `&scope=${scope}`);
+  const from = P.get("from") || "", to = P.get("to") || "";
+  const min = Math.max(0, +(P.get("min") || 0) || 0);
+  const advanced = !!(from && to);
+  const m = P.get("m") || idx.latest;
+  monthChips(document.getElementById("months"), idx.months,
+             advanced ? null : m, `&scope=${scope}`);
   document.getElementById("gen").textContent = `資料每日自動更新 · 產生於 ${idx.generated_at}`;
-  if (!m) return;
-  const md = await J(`data/month/${m}.json`);
+
+  // 進階搜尋：自訂期間 + 最低人數（跨月會抓多個月份檔，前端過濾）
+  const adv = document.getElementById("adv");
+  document.getElementById("advToggle").onclick = e => {
+    e.preventDefault();
+    adv.hidden = !adv.hidden;
+  };
+  if (advanced) adv.hidden = false;
+  document.getElementById("advFrom").value = from || (m ? `${m}-01` : "");
+  document.getElementById("advTo").value = to || (m ? `${m}-28` : "");
+  if (min) document.getElementById("advMin").value = min;
+  document.getElementById("advGo").onclick = e => {
+    e.preventDefault();
+    let f = document.getElementById("advFrom").value;
+    let t = document.getElementById("advTo").value;
+    if (!f || !t) return;
+    if (f > t) [f, t] = [t, f];
+    const mn = +document.getElementById("advMin").value || 0;
+    location.search = `?from=${f}&to=${t}&min=${mn}&scope=${scope}`;
+  };
+
+  let events = [], nEvents = 0, periodLabel = m || "—";
+  if (advanced) {
+    const inRange = idx.months.filter(x => x >= from.slice(0, 7) && x <= to.slice(0, 7));
+    const mds = await Promise.all(inRange.map(x =>
+      J(`data/month/${x}.json`).catch(() => null)));
+    for (const md of mds.filter(Boolean)) {
+      for (const ev of md.events) {
+        if (ev.date >= from && ev.date <= to && ev.players >= min) {
+          events.push({ ...ev, _m: md.month });
+        }
+      }
+    }
+    events.sort((a, b) => (a.date < b.date ? 1 : -1));
+    periodLabel = `${from}<br>～ ${to}${min ? `（≥${min} 人）` : ""}`;
+  } else {
+    if (!m) return;
+    const md = await J(`data/month/${m}.json`);
+    events = md.events.map(ev => ({ ...ev, _m: m }));
+  }
+  nEvents = events.length;
 
   const counts = {}; let decks = 0, players = 0;
-  for (const ev of md.events) {
+  for (const ev of events) {
     players += ev.players;
     for (const r of ev.rankings) {
       if (scope === "first" && r.rank !== 1) continue;
@@ -98,23 +149,24 @@ async function pageMeta() {
     }
   }
   document.getElementById("stats").innerHTML = `
-    <div class="stat"><div class="num">${md.events.length}</div><div class="lbl">活動數</div></div>
+    <div class="stat"><div class="num">${nEvents}</div><div class="lbl">活動數</div></div>
     <div class="stat"><div class="num">${decks}</div><div class="lbl">納入牌組</div></div>
     <div class="stat"><div class="num">${players}</div><div class="lbl">總參賽</div></div>
-    <div class="stat"><div class="lbl">月份</div><div>${m}</div></div>`;
+    <div class="stat"><div class="lbl">${advanced ? "期間" : "月份"}</div><div>${periodLabel}</div></div>`;
+  const base = advanced ? `?from=${from}&to=${to}&min=${min}` : `?m=${m}`;
   document.getElementById("seg").innerHTML =
-    `<a class="${scope === "top8" ? "on" : ""}" href="?m=${m}&scope=top8">前 8 強</a>
-     <a class="${scope === "first" ? "on" : ""}" href="?m=${m}&scope=first">僅第 1 名</a>`;
+    `<a class="${scope === "top8" ? "on" : ""}" href="${base}&scope=top8">前 8 強</a>
+     <a class="${scope === "first" ? "on" : ""}" href="${base}&scope=first">僅第 1 名</a>`;
   document.getElementById("pie").innerHTML = pieHTML(counts) ||
-    `<p class="hint">這個月沒有資料。</p>`;
+    `<p class="hint">這個${advanced ? "期間" : "月"}沒有符合的資料。</p>`;
 
   document.getElementById("events").innerHTML = `<table>
     <thead><tr><th>日期</th><th>活動</th><th>店家</th><th>人數</th><th>名次／職業（點看單卡）</th></tr></thead>
-    <tbody>${md.events.map(ev => `<tr>
+    <tbody>${events.map(ev => `<tr>
       <td>${esc(ev.date)}</td><td>${esc(ev.title)}</td><td>${esc(ev.store)}</td><td>${ev.players}</td>
       <td>${ev.rankings.map(r => r.code
-        ? `<a class="chip" href="${deckLink(m, r.code)}">#${r.rank} ${esc(r.cls)}</a>`
-        : `<span class="chip hidden-deck">#${r.rank} ${esc(r.cls)}·未公開</span>`).join("")}</td>
+        ? `<a class="chip" href="${deckLink(ev._m, r.code)}"${clsTint(r.cls)}>${clsDot(r.cls)}#${r.rank} ${esc(r.cls)}</a>`
+        : `<span class="chip hidden-deck"${clsTint(r.cls)}>${clsDot(r.cls)}#${r.rank} ${esc(r.cls)}·未公開</span>`).join("")}</td>
     </tr>`).join("")}</tbody></table>`;
 }
 
@@ -128,7 +180,7 @@ async function pageChampions() {
   const rows = md.champions.map((d, i) => `<tr>
     <td><span class="rankno">${i + 1}</span></td>
     <td class="cost">${yen(d.cost)}</td>
-    <td><span class="badge">${esc(d.cls)}</span></td>
+    <td>${clsBadge(d.cls)}</td>
     <td>${esc(d.event)}<div class="hint">${esc(d.date)} · ${d.players} 人</div></td>
     <td>${d.unpriced ? `<span class="warn">${d.unpriced} 張</span>` : "—"}</td>
     <td><a href="${deckLink(m, d.code, true)}">看單卡</a></td></tr>`).join("");
@@ -150,7 +202,7 @@ async function pageDeck() {
     const d = md.cheapest[code];
     if (!d) { secEl.innerHTML = `<p class="hint">找不到這副牌組。</p>`; return; }
     document.getElementById("title").innerHTML =
-      `牌組 ${esc(code)} <span class="badge">${esc((md.decks[code] || {}).cls || "")}</span>`;
+      `牌組 ${esc(code)} ${clsBadge((md.decks[code] || {}).cls || "")}`;
     document.getElementById("stats").innerHTML =
       `<div class="stat"><div class="num cost">${yen(d.cost)}</div><div class="lbl">全新組建（最便宜印刷）</div></div>` +
       (d.unpriced.length ? `<div class="stat"><div class="num warn">${d.unpriced.length}</div><div class="lbl">無價卡（未計入）</div></div>` : "");
@@ -167,7 +219,7 @@ async function pageDeck() {
     const d = md.decks[code];
     if (!d) { secEl.innerHTML = `<p class="hint">找不到這副牌組。</p>`; return; }
     document.getElementById("title").innerHTML =
-      `牌組 ${esc(code)} <span class="badge">${esc(d.cls)}</span>`;
+      `牌組 ${esc(code)} ${clsBadge(d.cls)}`;
     secEl.innerHTML = [["主牌組", d.main], ["進化牌組", d.evo]].map(([t, items]) => items.length
       ? `<h2>${t}（${items.reduce((a, [, n]) => a + n, 0)} 張）</h2><div class="grid">` +
         items.map(([cn, n]) => cardTile(cn, nameOf(cn),
@@ -217,7 +269,7 @@ function clusterHTML(c) {
   const evoN = c.consensus.evo.reduce((a, r) => a + r.num, 0);
   return `<div class="cluster">
     <div class="cluster-title">
-      <span class="badge">${esc(c.cls)}</span>
+      ${clsBadge(c.cls)}
       <strong>${esc(c.label)} 型</strong>
       <span class="hint">占比 ${c.share}% · 入賞 ${c.n} 副 · 冠軍 ${c.wins} 次</span>
     </div>
