@@ -78,13 +78,14 @@ function pieHTML(counts) {
 const deckLink = (m, code, cheapest) =>
   `deck.html?m=${m}&code=${encodeURIComponent(code)}${cheapest ? "&cheapest=1" : ""}`;
 
-// 職業色點 + 標籤底色（找職業時好掃視）；沒固定色的職業（聯動/雙職業）維持原樣
-const clsDot = cls => CLASS_COLORS[cls]
-  ? `<span class="cdot" style="background:${CLASS_COLORS[cls]}"></span>` : "";
-const clsTint = cls => CLASS_COLORS[cls]
-  ? ` style="border-color:${CLASS_COLORS[cls]}66;background:${CLASS_COLORS[cls]}1c"` : "";
-const clsBadge = cls =>
-  `<span class="badge"${clsTint(cls)}>${clsDot(cls)}${esc(cls)}</span>`;
+// 職業文字色（比圓餅色稍亮，深底上才好讀）；沒固定色的職業（聯動/雙職業）維持原樣
+const CLASS_TEXT = {
+  "ウィッチ": "#7d9aff", "ナイトメア": "#ff5570", "ドラゴン": "#ffa14f",
+  "ロイヤル": "#ffe119", "ビショップ": "#f2f0e6", "エルフ": "#52d472",
+  "ネメシス": "#46f0f0", "ニュートラル": "#b8b3d1",
+};
+const clsColor = cls => CLASS_TEXT[cls] ? ` style="color:${CLASS_TEXT[cls]}"` : "";
+const clsBadge = cls => `<span class="badge"${clsColor(cls)}>${esc(cls)}</span>`;
 
 // ================= Meta 總表 =================
 async function pageMeta() {
@@ -93,20 +94,26 @@ async function pageMeta() {
   const from = P.get("from") || "", to = P.get("to") || "";
   const min = Math.max(0, +(P.get("min") || 0) || 0);
   const advanced = !!(from && to);
+  const mode = advanced || P.get("mode") === "range" ? "range" : "month";
   const m = P.get("m") || idx.latest;
-  monthChips(document.getElementById("months"), idx.months,
-             advanced ? null : m, `&scope=${scope}`);
   document.getElementById("gen").textContent = `資料每日自動更新 · 產生於 ${idx.generated_at}`;
 
-  // 進階搜尋：自訂期間 + 最低人數（跨月會抓多個月份檔，前端過濾）
+  // 模式切換：月份 / 自訂範圍
+  document.getElementById("modeSeg").innerHTML =
+    `<a class="${mode === "month" ? "on" : ""}" href="?m=${m || ""}&scope=${scope}">月份</a>
+     <a class="${mode === "range" ? "on" : ""}" href="?${advanced
+       ? `from=${from}&to=${to}&min=${min}` : "mode=range"}&scope=${scope}">自訂範圍</a>`;
+  const monthsEl = document.getElementById("months");
+  monthsEl.hidden = mode !== "month";
+  if (mode === "month") monthChips(monthsEl, idx.months, m, `&scope=${scope}`);
+
+  // 自訂範圍表單（預設近 30 天）
   const adv = document.getElementById("adv");
-  document.getElementById("advToggle").onclick = e => {
-    e.preventDefault();
-    adv.hidden = !adv.hidden;
-  };
-  if (advanced) adv.hidden = false;
-  document.getElementById("advFrom").value = from || (m ? `${m}-01` : "");
-  document.getElementById("advTo").value = to || (m ? `${m}-28` : "");
+  adv.hidden = mode !== "range";
+  const iso = d => d.toISOString().slice(0, 10);
+  const today = new Date(), ago = new Date(today - 30 * 864e5);
+  document.getElementById("advFrom").value = from || iso(ago);
+  document.getElementById("advTo").value = to || iso(today);
   if (min) document.getElementById("advMin").value = min;
   document.getElementById("advGo").onclick = e => {
     e.preventDefault();
@@ -117,6 +124,11 @@ async function pageMeta() {
     const mn = +document.getElementById("advMin").value || 0;
     location.search = `?from=${f}&to=${t}&min=${mn}&scope=${scope}`;
   };
+  if (mode === "range" && !advanced) {      // 還沒按套用：只顯示表單
+    document.getElementById("pie").innerHTML =
+      `<p class="hint">設定期間（可跨月）與最低人數後按「套用」。</p>`;
+    return;
+  }
 
   let events = [], nEvents = 0, periodLabel = m || "—";
   if (advanced) {
@@ -165,8 +177,8 @@ async function pageMeta() {
     <tbody>${events.map(ev => `<tr>
       <td>${esc(ev.date)}</td><td>${esc(ev.title)}</td><td>${esc(ev.store)}</td><td>${ev.players}</td>
       <td>${ev.rankings.map(r => r.code
-        ? `<a class="chip" href="${deckLink(ev._m, r.code)}"${clsTint(r.cls)}>${clsDot(r.cls)}#${r.rank} ${esc(r.cls)}</a>`
-        : `<span class="chip hidden-deck"${clsTint(r.cls)}>${clsDot(r.cls)}#${r.rank} ${esc(r.cls)}·未公開</span>`).join("")}</td>
+        ? `<a class="chip" href="${deckLink(ev._m, r.code)}"${clsColor(r.cls)}>#${r.rank} ${esc(r.cls)}</a>`
+        : `<span class="chip hidden-deck"${clsColor(r.cls)}>#${r.rank} ${esc(r.cls)}·未公開</span>`).join("")}</td>
     </tr>`).join("")}</tbody></table>`;
 }
 

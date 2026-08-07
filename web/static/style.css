@@ -1,4 +1,5 @@
 :root{
+  color-scheme:dark;   /* 原生控件（日期/數字輸入）跟著深色主題 */
   --bg:#13121a; --surface:#1c1b26; --surface2:#262433; --border:#34324a;
   --text:#eceaf6; --muted:#9b97b4; --accent:#9a7bff; --accent-2:#ffcf66;
   --danger:#ff6b7d; --good:#57d9a3;
@@ -72,8 +73,6 @@ tr:first-child .rankno{background:var(--accent-2);color:#2a1f00}
   background:var(--surface2);border:1px solid var(--border);font-size:.82rem}
 .chip.hidden-deck{opacity:.55}
 .warn{color:var(--danger)}
-.cdot{display:inline-block;width:.55rem;height:.55rem;border-radius:50%;
-  margin-right:.32rem;vertical-align:baseline}
 
 /* ---- card tiles ---- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:.7rem}
