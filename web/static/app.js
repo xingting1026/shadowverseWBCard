@@ -209,12 +209,16 @@ async function pageDeck() {
   const nameOf = cn => (cards[cn] || [cn])[0];
   const priceOf = cn => (cards[cn] || [null, null])[1];
   const secEl = document.getElementById("sections");
+  // 原始牌組在 DeckLog（Bushiroad 官方服務）的公開頁
+  const dlBtn = `<a class="btn-ghost" style="margin-left:.5rem;font-size:.82rem;vertical-align:middle"
+    target="_blank" rel="noopener"
+    href="https://decklog.bushiroad.com/view/${encodeURIComponent(code)}">在 DeckLog 開啟 ↗</a>`;
 
   if (cheapest) {
     const d = md.cheapest[code];
     if (!d) { secEl.innerHTML = `<p class="hint">找不到這副牌組。</p>`; return; }
     document.getElementById("title").innerHTML =
-      `牌組 ${esc(code)} ${clsBadge((md.decks[code] || {}).cls || "")}`;
+      `牌組 ${esc(code)} ${clsBadge((md.decks[code] || {}).cls || "")}${dlBtn}`;
     document.getElementById("stats").innerHTML =
       `<div class="stat"><div class="num cost">${yen(d.cost)}</div><div class="lbl">全新組建（最便宜印刷）</div></div>` +
       (d.unpriced.length ? `<div class="stat"><div class="num warn">${d.unpriced.length}</div><div class="lbl">無價卡（未計入）</div></div>` : "");
@@ -231,7 +235,7 @@ async function pageDeck() {
     const d = md.decks[code];
     if (!d) { secEl.innerHTML = `<p class="hint">找不到這副牌組。</p>`; return; }
     document.getElementById("title").innerHTML =
-      `牌組 ${esc(code)} ${clsBadge(d.cls)}`;
+      `牌組 ${esc(code)} ${clsBadge(d.cls)}${dlBtn}`;
     secEl.innerHTML = [["主牌組", d.main], ["進化牌組", d.evo]].map(([t, items]) => items.length
       ? `<h2>${t}（${items.reduce((a, [, n]) => a + n, 0)} 張）</h2><div class="grid">` +
         items.map(([cn, n]) => cardTile(cn, nameOf(cn),
