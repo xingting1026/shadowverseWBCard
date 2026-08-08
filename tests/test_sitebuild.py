@@ -11,8 +11,10 @@ def seed(conn):
         ("BP01-E01", "火龍", "ドラゴン", "フォロワー・エボルヴ", "BP01"),
     ]
     for cn, nm, cls, tp, st in cards:
-        conn.execute("INSERT INTO cards(card_number,name,class,type,set_code) "
-                     "VALUES(?,?,?,?,?)", (cn, nm, cls, tp, st))
+        conn.execute("INSERT INTO cards(card_number,name,class,type,set_code,text,flavor) "
+                     "VALUES(?,?,?,?,?,?,?)",
+                     (cn, nm, cls, tp, st,
+                      f"{nm}的效果", "flavor" if tp == "フォロワー" else ""))
     for cn, jpy in [("BP01-001", 1000), ("BP01-101", 100),
                     ("BP01-002", 50), ("BP01-E01", 200)]:
         conn.execute("INSERT INTO prices(card_number,jpy) VALUES(?,?)", (cn, jpy))
@@ -88,6 +90,11 @@ def test_export_site_writes_all_files(conn, tmp_path):
     usage = json.loads((out / "data" / "usage" / "BP01.json").read_text(encoding="utf-8"))
     assert usage["BP01-001"] == [["2026-06", "DK1", "殿堂賽", "2026-06-15", 16, 3]]
     assert usage["BP01-E01"][0][5] == 2
+    # 牌效：同名印刷去重（火龍兩種印刷共一份）、基本/進化分開
+    eff = json.loads((out / "data" / "effects.ja.json").read_text(encoding="utf-8"))
+    assert eff["火龍"]["B"] == ["火龍的效果", "flavor"]
+    assert eff["火龍"]["E"][0] == "火龍的效果"
+    assert eff["水龍"]["B"][0] == "水龍的效果"
 
 
 def test_build_usage_index_sorted_desc_and_champions_only():

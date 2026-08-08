@@ -5,7 +5,8 @@ from .config import DB_PATH
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS cards (
   card_number TEXT PRIMARY KEY, name TEXT, class TEXT, type TEXT,
-  cost TEXT, atk TEXT, def TEXT, set_code TEXT, rarity TEXT, img TEXT
+  cost TEXT, atk TEXT, def TEXT, set_code TEXT, rarity TEXT, img TEXT,
+  text TEXT, flavor TEXT
 );
 CREATE TABLE IF NOT EXISTS owned (
   card_number TEXT PRIMARY KEY, qty INTEGER NOT NULL DEFAULT 0
@@ -31,6 +32,8 @@ def get_conn(path=DB_PATH):
 
 _MIGRATIONS = (
     "ALTER TABLE decks ADD COLUMN evolve_json TEXT",   # 進化牌組（舊 DB 補欄位）
+    "ALTER TABLE cards ADD COLUMN text TEXT",          # 日文牌效（官方 detail 區塊）
+    "ALTER TABLE cards ADD COLUMN flavor TEXT",        # flavor text（官方 speech 區塊）
 )
 
 def init_db(conn):

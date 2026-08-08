@@ -20,6 +20,20 @@ def _stat(el):
     return text
 
 
+def _effect_text(el):
+    """牌效/flavor 區塊 → 純文字。行內小圖示（コスト/攻擊力/職業…）轉成 [alt] 標記，
+    <br> 轉換行，行首尾空白清掉。"""
+    if not el:
+        return ""
+    el = BeautifulSoup(str(el), "html.parser")   # 複製再改，不動原 soup
+    for img in el.find_all("img"):
+        img.replace_with(f"[{img.get('alt', '')}]")
+    for br in el.find_all("br"):
+        br.replace_with("\n")
+    lines = [ln.strip() for ln in el.get_text().split("\n")]
+    return "\n".join(ln for ln in lines if ln)
+
+
 def parse_cardlist(html):
     """Parse a cardlist page HTML and return a list of card dicts.
 
@@ -67,6 +81,8 @@ def parse_cardlist(html):
                 "def": _stat(li.select_one("span.status-Item-Hp")),
                 "set_code": code.split("-")[0] if "-" in code else "",
                 "img": img_rel,
+                "text": _effect_text(li.select_one("div.detail")),
+                "flavor": _effect_text(li.select_one("div.speech")),
             })
     return cards
 
@@ -114,8 +130,9 @@ def refresh_set(conn, set_code, fetcher=_fetch_page):
     for c in all_cards:
         conn.execute(
             "INSERT OR REPLACE INTO cards"
-            "(card_number, name, class, type, cost, atk, def, set_code, rarity, img) "
-            "VALUES(?,?,?,?,?,?,?,?,?,?)",
+            "(card_number, name, class, type, cost, atk, def, set_code, rarity, img,"
+            " text, flavor) "
+            "VALUES(?,?,?,?,?,?,?,?,?,?,?,?)",
             (
                 c["card_number"],
                 c["name"],
@@ -127,6 +144,8 @@ def refresh_set(conn, set_code, fetcher=_fetch_page):
                 c["set_code"],
                 c.get("rarity", ""),
                 c.get("img", ""),
+                c.get("text", ""),
+                c.get("flavor", ""),
             ),
         )
     conn.commit()

@@ -22,6 +22,7 @@ concurrency:
 jobs:
   update-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 30          # 卡住的爬蟲早點砍掉，下一班次自然補回（回看 7 天）
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -35,14 +36,18 @@ jobs:
 
       - run: pip install -r requirements.txt
 
-      # 抓近 7 天：牌組碼常延遲公開，重抓最近一週才補得到；已解析過的牌組有快取不會重打
+      # 抓近 7 天：牌組碼常延遲公開，重抓最近一週才補得到；已解析過的牌組有快取不會重打。
+      # continue-on-error：對外爬蟲偶發 timeout 不讓整趟失敗——用舊資料照樣產站部署，
+      # 缺的資料下一班次（回看 7 天）自動補回。
       - name: 抓近 7 天新賽果（僅排程時；push 只重新產站）
         if: github.event_name != 'push'
+        continue-on-error: true
         run: python scrape_meta.py --days 7
 
       # 新彈自我修復：牌組出現卡表沒有的 set（如 BP21）就補官方卡表+價格，並刷新近期價格
       - name: 補新彈卡表與價格（僅排程時）
         if: github.event_name != 'push'
+        continue-on-error: true
         run: python update_sets.py
 
       - name: 產靜態站（含補抓新卡圖）

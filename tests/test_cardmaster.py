@@ -133,3 +133,21 @@ def test_refresh_set_paginates_all_pages(conn):
     cardmaster.refresh_set(conn, "BP17", fetcher=fake_fetch)
     assert cardmaster.get(conn, "BP17-001")["name"] == "一頁卡"
     assert cardmaster.get(conn, "BP17-016")["name"] == "二頁卡"   # page 2 も抓到了
+
+
+def test_effect_text_converts_icons_and_br():
+    html = ('<ul class="cardlist-Result_List"><li><p class="number">BP21-003</p>'
+            '<p class="ttl">無謬の偶像・ライル</p>'
+            '<div class="detail"><p>【進化時】カードを1枚引く。<br>'
+            'それは<img alt="攻撃力" src="x.png">+4/<img alt="体力" src="y.png">+4する。</p></div>'
+            '<div class="speech">こんなところで。<br>……僕は。</div></li></ul>')
+    c = cardmaster.parse_cardlist(html)[0]
+    assert c["text"] == "【進化時】カードを1枚引く。\nそれは[攻撃力]+4/[体力]+4する。"
+    assert c["flavor"] == "こんなところで。\n……僕は。"
+
+
+def test_effect_text_empty_when_no_detail():
+    html = ('<ul class="cardlist-Result_List"><li><p class="number">BP21-999</p>'
+            '<p class="ttl">テスト</p></li></ul>')
+    c = cardmaster.parse_cardlist(html)[0]
+    assert c["text"] == "" and c["flavor"] == ""

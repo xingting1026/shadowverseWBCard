@@ -45,10 +45,45 @@ function monthChips(el, months, sel, extra = "") {
 }
 
 function cardTile(cn, name, sub, cls = "") {
-  return `<div class="card ${cls}">
+  return `<div class="card ${cls}" data-cn="${esc(cn)}">
     <img data-src="img/${encodeURIComponent(cn)}.jpg" alt="${esc(cn)}" loading="lazy">
     <div class="name">${esc(name)}</div>${sub}</div>`;
 }
+
+// ---- 牌效彈窗：點卡片（非連結的）顯示大圖＋日文牌效 ----
+let CARDS = null;                                   // 各頁載入 cards.json 後掛在這
+let _effectsP = null;
+const loadEffects = () =>
+  (_effectsP ||= J("data/effects.ja.json").catch(() => ({})));
+
+async function openCardModal(cn) {
+  const [name, , evo] = (CARDS && CARDS[cn]) || [cn, null, 0];
+  const eff = await loadEffects();
+  const entry = (eff[name] || {})[evo ? "E" : "B"];
+  const txt = entry
+    ? `<div class="efftext">${esc(entry[0]).replace(/\n/g, "<br>")}</div>` +
+      (entry[1] ? `<div class="flavor">${esc(entry[1]).replace(/\n/g, "<br>")}</div>` : "")
+    : `<p class="hint">（暫無牌效資料）</p>`;
+  const back = document.createElement("div");
+  back.className = "modal-back";
+  back.innerHTML = `<div class="modal">
+    <img src="img/${encodeURIComponent(cn)}.jpg" alt="${esc(cn)}">
+    <div class="modal-txt">
+      <h3>${esc(name)}${evo ? '<span class="badge" style="margin-left:.5rem">進化</span>' : ""}</h3>
+      <div class="code">${esc(cn)}</div>${txt}
+    </div>
+    <button class="modal-x" aria-label="關閉">✕</button></div>`;
+  const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
+  const onKey = e => { if (e.key === "Escape") close(); };
+  back.onclick = e => { if (e.target === back || e.target.className === "modal-x") close(); };
+  document.addEventListener("keydown", onKey);
+  document.body.appendChild(back);
+}
+
+document.addEventListener("click", e => {
+  const card = e.target.closest(".card[data-cn]");
+  if (card && !e.target.closest("a")) openCardModal(card.dataset.cn);
+});
 
 // ---- 圓餅（同舊版 engine.pie_slices 的 SVG 路徑作法）----
 function pieHTML(counts) {
@@ -206,6 +241,7 @@ async function pageDeck() {
   const m = P.get("m"), code = P.get("code"), cheapest = P.get("cheapest") === "1";
   if (!m || !code) return;
   const [md, cards] = await Promise.all([J(`data/month/${m}.json`), J("data/cards.json")]);
+  CARDS = cards;
   const nameOf = cn => (cards[cn] || [cn])[0];
   const priceOf = cn => (cards[cn] || [null, null])[1];
   const secEl = document.getElementById("sections");
@@ -223,7 +259,7 @@ async function pageDeck() {
       `<div class="stat"><div class="num cost">${yen(d.cost)}</div><div class="lbl">全新組建（最便宜印刷）</div></div>` +
       (d.unpriced.length ? `<div class="stat"><div class="num warn">${d.unpriced.length}</div><div class="lbl">無價卡（未計入）</div></div>` : "");
     document.getElementById("note").innerHTML =
-      "已把參賽的高稀有度卡換成<strong>同名最便宜印刷</strong>；主牌組與進化牌組分開比價。";
+      "已把參賽的高稀有度卡換成<strong>同名最便宜印刷</strong>；主牌組與進化牌組分開比價。點卡片可看日文牌效。";
     secEl.innerHTML = [["主牌組", d.main], ["進化牌組", d.evo]].map(([t, rows]) => rows.length
       ? `<h2>${t}（${rows.reduce((a, r) => a + r.num, 0)} 張）</h2><div class="grid">` +
         rows.map(r => cardTile(r.cn, r.name,
@@ -236,6 +272,7 @@ async function pageDeck() {
     if (!d) { secEl.innerHTML = `<p class="hint">找不到這副牌組。</p>`; return; }
     document.getElementById("title").innerHTML =
       `牌組 ${esc(code)} ${clsBadge(d.cls)}${dlBtn}`;
+    document.getElementById("note").textContent = "點卡片可看日文牌效。";
     secEl.innerHTML = [["主牌組", d.main], ["進化牌組", d.evo]].map(([t, items]) => items.length
       ? `<h2>${t}（${items.reduce((a, [, n]) => a + n, 0)} 張）</h2><div class="grid">` +
         items.map(([cn, n]) => cardTile(cn, nameOf(cn),
@@ -258,6 +295,7 @@ const TIER_DESC = {
 
 async function pageTiers() {
   const [tiers, cards] = await Promise.all([J("data/tiers.json"), J("data/cards.json")]);
+  CARDS = cards;
   document.getElementById("win").textContent =
     `統計視窗：${tiers.window.start} ～ ${tiers.window.end}（近 ${tiers.window.days} 天）、` +
     `共 ${tiers.total_decks} 副公開入賞牌組`;
@@ -320,6 +358,7 @@ async function pageSearch() {
   const out = document.getElementById("result");
   out.innerHTML = `<p class="hint">查詢中…</p>`;
   const cards = await J("data/cards.json");
+  CARDS = cards;
 
   // 1) 卡號 → 反查名字；2) 名字（精確或模糊）→ 唯一命中直接查、多命中列名字選單
   let name = null;

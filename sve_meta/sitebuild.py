@@ -120,6 +120,24 @@ def _used_card_numbers(month_datas, tiers):
     return used
 
 
+def export_effects(conn, used_cns, nmap, tmap):
+    """日文牌效：{卡名: {"B"|"E": [牌效, flavor]}}。
+    同名所有印刷共用一份（規則上同名同效），基本/進化分開；
+    只含牌組用到的卡名，代表文字取卡號最小且有牌效的印刷。"""
+    wanted = {(nmap.get(cn, cn), byname.is_evolve(tmap.get(cn))) for cn in used_cns}
+    eff = {}
+    rows = conn.execute(
+        "SELECT card_number, name, type, text, flavor FROM cards "
+        "WHERE text IS NOT NULL AND text != '' ORDER BY card_number")
+    for r in rows:
+        ev = byname.is_evolve(r["type"])
+        if (r["name"], ev) not in wanted:
+            continue
+        eff.setdefault(r["name"], {}).setdefault(
+            "E" if ev else "B", [r["text"], r["flavor"] or ""])
+    return eff
+
+
 def build_usage_index(month_datas):
     """卡片查詢用的反向索引：卡號 → 用過它的『第 1 名』牌組清單。
     依 set 拆檔（查一張卡只需下載該 set 的小 JSON）。
@@ -221,6 +239,9 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
     usage = build_usage_index(month_datas)
     for set_code, by_cn in usage.items():
         _write_json(out / "data" / "usage" / f"{set_code}.json", by_cn)
+
+    effects = export_effects(conn, used, nmap, tmap)
+    _write_json(out / "data" / "effects.ja.json", effects)
 
     _write_json(out / "data" / "index.json",
                 {"generated_at": datetime.datetime.now(datetime.timezone.utc)
