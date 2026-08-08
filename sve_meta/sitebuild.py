@@ -128,7 +128,8 @@ def export_effects(conn, used_cns, nmap, tmap):
     eff = {}
     rows = conn.execute(
         "SELECT card_number, name, type, text, flavor FROM cards "
-        "WHERE text IS NOT NULL AND text != '' ORDER BY card_number")
+        "WHERE text IS NOT NULL AND text != '' "
+        "ORDER BY text_full DESC, card_number")   # 優先用單卡頁抓的完整全文
     for r in rows:
         ev = byname.is_evolve(r["type"])
         if (r["name"], ev) not in wanted:
@@ -242,6 +243,10 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
 
     effects = export_effects(conn, used, nmap, tmap)
     _write_json(out / "data" / "effects.ja.json", effects)
+    zh_path = Path(__file__).resolve().parent.parent / "translations" / "effects.zh.json"
+    if zh_path.exists():                    # 繁中翻譯（人工/AI 維護，缺卡由前端 fallback 日文）
+        _write_json(out / "data" / "effects.zh.json",
+                    json.loads(zh_path.read_text(encoding="utf-8")))
 
     _write_json(out / "data" / "index.json",
                 {"generated_at": datetime.datetime.now(datetime.timezone.utc)

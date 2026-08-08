@@ -50,34 +50,56 @@ function cardTile(cn, name, sub, cls = "") {
     <div class="name">${esc(name)}</div>${sub}</div>`;
 }
 
-// ---- 牌效彈窗：點卡片（非連結的）顯示大圖＋日文牌效 ----
+// ---- 牌效彈窗：點卡片（非連結的）顯示大圖＋牌效（中/日可切換，中文缺卡自動退日文）----
 let CARDS = null;                                   // 各頁載入 cards.json 後掛在這
-let _effectsP = null;
-const loadEffects = () =>
-  (_effectsP ||= J("data/effects.ja.json").catch(() => ({})));
+let EFFLANG = localStorage.getItem("efflang") || "zh";
+const _effCache = {};
+const loadEffects = lang =>
+  (_effCache[lang] ||= J(`data/effects.${lang}.json`).catch(() => ({})));
+
+async function effHTML(name, evo) {
+  let entry = ((await loadEffects(EFFLANG))[name] || {})[evo ? "E" : "B"];
+  let note = "";
+  if (!entry && EFFLANG !== "ja") {
+    entry = ((await loadEffects("ja"))[name] || {})[evo ? "E" : "B"];
+    if (entry) note = `<p class="hint">（此卡尚無中文翻譯，顯示日文原文）</p>`;
+  }
+  if (!entry) return `<p class="hint">（暫無牌效資料）</p>`;
+  return note + `<div class="efftext">${esc(entry[0]).replace(/\n/g, "<br>")}</div>` +
+    (entry[1] ? `<div class="flavor">${esc(entry[1]).replace(/\n/g, "<br>")}</div>` : "");
+}
 
 async function openCardModal(cn) {
   const [name, , evo] = (CARDS && CARDS[cn]) || [cn, null, 0];
-  const eff = await loadEffects();
-  const entry = (eff[name] || {})[evo ? "E" : "B"];
-  const txt = entry
-    ? `<div class="efftext">${esc(entry[0]).replace(/\n/g, "<br>")}</div>` +
-      (entry[1] ? `<div class="flavor">${esc(entry[1]).replace(/\n/g, "<br>")}</div>` : "")
-    : `<p class="hint">（暫無牌效資料）</p>`;
   const back = document.createElement("div");
   back.className = "modal-back";
   back.innerHTML = `<div class="modal">
     <img src="img/${encodeURIComponent(cn)}.jpg" alt="${esc(cn)}">
     <div class="modal-txt">
       <h3>${esc(name)}${evo ? '<span class="badge" style="margin-left:.5rem">進化</span>' : ""}</h3>
-      <div class="code">${esc(cn)}</div>${txt}
+      <div class="code">${esc(cn)}</div>
+      <div class="seg efflang">
+        <a data-l="zh" class="${EFFLANG === "zh" ? "on" : ""}">中文</a>
+        <a data-l="ja" class="${EFFLANG === "ja" ? "on" : ""}">日文</a>
+      </div>
+      <div class="effbody"><p class="hint">載入中…</p></div>
     </div>
     <button class="modal-x" aria-label="關閉">✕</button></div>`;
+  const body = back.querySelector(".effbody");
+  const render = async () => { body.innerHTML = await effHTML(name, evo); };
+  back.querySelectorAll(".efflang a").forEach(a => a.onclick = () => {
+    EFFLANG = a.dataset.l;
+    localStorage.setItem("efflang", EFFLANG);
+    back.querySelectorAll(".efflang a").forEach(x =>
+      x.classList.toggle("on", x.dataset.l === EFFLANG));
+    render();
+  });
   const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
   const onKey = e => { if (e.key === "Escape") close(); };
   back.onclick = e => { if (e.target === back || e.target.className === "modal-x") close(); };
   document.addEventListener("keydown", onKey);
   document.body.appendChild(back);
+  render();
 }
 
 document.addEventListener("click", e => {

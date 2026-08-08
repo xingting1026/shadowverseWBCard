@@ -34,6 +34,7 @@ _MIGRATIONS = (
     "ALTER TABLE decks ADD COLUMN evolve_json TEXT",   # 進化牌組（舊 DB 補欄位）
     "ALTER TABLE cards ADD COLUMN text TEXT",          # 日文牌效（官方 detail 區塊）
     "ALTER TABLE cards ADD COLUMN flavor TEXT",        # flavor text（官方 speech 區塊）
+    "ALTER TABLE cards ADD COLUMN text_full INTEGER DEFAULT 0",  # 1=已從單卡頁抓到完整全文
 )
 
 def init_db(conn):

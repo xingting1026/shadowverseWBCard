@@ -25,7 +25,7 @@ def _effect_text(el):
     <br> 轉換行，行首尾空白清掉。"""
     if not el:
         return ""
-    el = BeautifulSoup(str(el), "html.parser")   # 複製再改，不動原 soup
+    el = BeautifulSoup(str(el), "lxml")   # 複製再改；lxml 能容錯官方未閉合的 <img>
     for img in el.find_all("img"):
         img.replace_with(f"[{img.get('alt', '')}]")
     for br in el.find_all("br"):
@@ -46,7 +46,7 @@ def parse_cardlist(html):
         span.status-Item.status-Item-Power → atk
         span.status-Item.status-Item-Hp   → def
     """
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     cards = []
     for ul in soup.select("ul.cardlist-Result_List"):
         for li in ul.select("li"):
@@ -97,7 +97,7 @@ def _normalize_paginated_html(html):
     """Wrap bare ``li.ex-item`` elements (returned by the paginated endpoint) in a
     ``ul.cardlist-Result_List`` so that ``parse_cardlist`` can parse them normally.
     If the page already contains the expected ``ul``, it is returned unchanged."""
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     if soup.select("ul.cardlist-Result_List"):
         return html  # page 1 — already in the right format
     items = soup.select("li.ex-item")

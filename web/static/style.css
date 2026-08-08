@@ -98,6 +98,8 @@ tr:first-child .rankno{background:var(--accent-2);color:#2a1f00}
 .modal-txt{min-width:0}
 .modal-txt h3{margin:.1rem 0 .2rem;font-size:1.05rem}
 .modal-txt .code{color:var(--muted);font-size:.8rem;margin-bottom:.6rem}
+.modal .efflang{margin-bottom:.6rem}
+.modal .efflang a{cursor:pointer;padding:.2rem .7rem;font-size:.8rem}
 .efftext{font-size:.9rem;line-height:1.7;white-space:normal;word-break:break-word}
 .flavor{margin-top:.8rem;padding-top:.6rem;border-top:1px solid var(--border);
   color:var(--muted);font-size:.82rem;font-style:italic;line-height:1.6}
