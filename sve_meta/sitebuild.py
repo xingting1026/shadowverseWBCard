@@ -78,6 +78,8 @@ def export_month(conn, month, nmap, tmap, cheap_id):
         for r in ev.get("rankings", []):
             code = r.get("deck_code") or None
             cls = normalize_class(r.get("class"))
+            if cls == "不明":       # 店家沒登錄職業的名次：不顯示（之後補登會自動回來）
+                continue
             has_list = bool(r.get("list") or r.get("evolve"))
             rks.append({"rank": r.get("rank"), "cls": cls,
                         "code": code if has_list else None})

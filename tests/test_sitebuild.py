@@ -30,6 +30,7 @@ EVENTS = [{
                   {"card_number": "BP01-002", "num": 2}],
          "evolve": [{"card_number": "BP01-E01", "num": 2}]},
         {"rank": 2, "class": "ウマ娘", "deck_code": None, "list": [], "evolve": []},
+        {"rank": 3, "class": "", "deck_code": None, "list": [], "evolve": []},
     ]}]
 
 
@@ -58,6 +59,8 @@ def test_export_month_shape(conn):
     assert ev["rankings"][0] == {"rank": 1, "cls": "ドラゴン", "code": "DK1"}
     # 未公開牌組：code 為 None、職業正規化（ウマ娘→ニュートラル）
     assert ev["rankings"][1] == {"rank": 2, "cls": "ニュートラル", "code": None}
+    # 職業空白（店家沒登錄）的名次整筆略過
+    assert len(ev["rankings"]) == 2
     assert md["decks"]["DK1"]["main"] == [["BP01-001", 3], ["BP01-002", 2]]
     assert md["champions"][0]["code"] == "DK1"
     assert md["champions"][0]["cost"] == md["cheapest"]["DK1"]["cost"] == 800
