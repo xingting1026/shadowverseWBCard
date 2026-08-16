@@ -151,5 +151,4 @@ tr:first-child .rankno{background:var(--accent-2);color:#2a1f00}
 .ai-cell--unknown{color:var(--muted);opacity:.45;font-size:1rem}
 .ai-cell--mirror{color:var(--muted);opacity:.35;font-size:.78rem}
 .ai-cell--derived b,.ai-cell--derived small{opacity:.62}
-.ai-derived-tag{color:var(--accent-2) !important;opacity:.8 !important;font-size:.66rem !important;letter-spacing:1px}
 .ai-method p{margin:.3rem 0 0;color:var(--muted);font-size:.82rem;line-height:1.6}

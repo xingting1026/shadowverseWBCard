@@ -477,8 +477,7 @@ function aiCellHTML(cell, derived) {
   const title = `${esc(cell.deck)} 對 ${esc(cell.opponent)}：${cell.win}%（±${ci.toFixed(1)}，${cell.games}局）\n先攻 ${cell.first}%／後攻 ${cell.second}%\n${esc(cell.source ?? "")}${derived ? "\n（由對稱格推算）" : ""}`;
   return `<td class="ai-cell ${derived ? "ai-cell--derived" : ""}" style="${aiCellColor(cell.win)}" title="${title}">
     <b>${cell.win.toFixed(1)}%</b>
-    <small>先 ${cell.first.toFixed(1)}｜後 ${cell.second.toFixed(1)}</small>
-    ${derived ? `<small class="ai-derived-tag">推算</small>` : ""}</td>`;
+    <small>先 ${cell.first.toFixed(1)}｜後 ${cell.second.toFixed(1)}</small></td>`;
 }
 
 async function pageAi() {
@@ -512,7 +511,7 @@ async function pageAi() {
     <strong>方法</strong>
     <p>每個實測格：兩套牌各自由神經網路 policy 操作（自我對抗聯賽訓練），收斂後以未參與訓練的
     新亂數種子做 1,000 局決定論盲測（先攻、後攻各 500 局）。格中「先／後」為列牌組先攻／後攻時的勝率，
-    滑鼠停留可見 95% 信賴區間與資料來源。淡色「推算」格＝由對稱實測格取補數。
+    滑鼠停留可見 95% 信賴區間與資料來源。淡色格＝由對稱實測格取補數。
     此為模擬器內固定牌表、已實作規則下的對局強度，僅供參考，不等於真實賽場勝率。</p></div>`;
 }
 
