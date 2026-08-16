@@ -457,10 +457,69 @@ async function renderUsageByName(out, name, cards) {
   lazyImgs(out);
 }
 
+// ---- AI 勝率表 ----
+// 每格＝「列牌組」對「欄牌組」的勝率。實測格來自 ai-matrix.json；
+// 對稱格（欄對列）由 100−實測值推算並以較淡樣式標示。顏色越高越顯眼。
+function aiCellColor(win) {
+  if (win == null) return "";
+  // 50% 中性；越偏離越飽和。高勝率暖綠、低勝率暗紅，intensity 隨差距放大。
+  const d = win - 50;
+  const hue = d >= 0 ? 145 : 8;
+  const sat = Math.min(90, 25 + Math.abs(d) * 3.2);
+  const light = Math.max(24, 46 - Math.abs(d) * 0.55);
+  const alpha = Math.min(0.95, 0.18 + Math.abs(d) * 0.028);
+  return `background:hsla(${hue},${sat}%,${light}%,${alpha.toFixed(2)})`;
+}
+
+function aiCellHTML(cell, derived) {
+  if (!cell) return `<td class="ai-cell ai-cell--unknown">—</td>`;
+  const ci = 1.96 * Math.sqrt(cell.win / 100 * (1 - cell.win / 100) / cell.games) * 100;
+  const title = `${esc(cell.deck)} 對 ${esc(cell.opponent)}：${cell.win}%（±${ci.toFixed(1)}，${cell.games}局）\n先攻 ${cell.first}%／後攻 ${cell.second}%\n${esc(cell.source ?? "")}${derived ? "\n（由對稱格推算）" : ""}`;
+  return `<td class="ai-cell ${derived ? "ai-cell--derived" : ""}" style="${aiCellColor(cell.win)}" title="${title}">
+    <b>${cell.win.toFixed(1)}%</b>
+    <small>先 ${cell.first.toFixed(1)}｜後 ${cell.second.toFixed(1)}</small>
+    ${derived ? `<small class="ai-derived-tag">推算</small>` : ""}</td>`;
+}
+
+async function pageAi() {
+  const data = await J("data/ai-matrix.json");
+  document.getElementById("ai-note").textContent =
+    `${data.note}（更新：${data.updated}）`;
+  const names = data.archetypes;
+  const measured = new Map(data.cells.map(c => [`${c.deck}|${c.opponent}`, c]));
+  const lookup = (row, col) => {
+    const direct = measured.get(`${row}|${col}`);
+    if (direct) return { cell: direct, derived: false };
+    const mirror = measured.get(`${col}|${row}`);
+    if (mirror) return {
+      cell: { deck: row, opponent: col, games: mirror.games, source: mirror.source,
+              win: +(100 - mirror.win).toFixed(1),
+              first: +(100 - mirror.second).toFixed(1),
+              second: +(100 - mirror.first).toFixed(1) },
+      derived: true,
+    };
+    return { cell: null, derived: false };
+  };
+  const rows = names.map(row => `<tr><th class="ai-row-head">${esc(row)}</th>` +
+    names.map(col => row === col
+      ? `<td class="ai-cell ai-cell--mirror">鏡像</td>`
+      : aiCellHTML(lookup(row, col).cell, lookup(row, col).derived)).join("") + "</tr>").join("");
+  document.getElementById("ai-matrix").innerHTML =
+    `<div class="ai-matrix-wrap"><table class="ai-matrix">
+      <thead><tr><th class="ai-corner">我方 ↓ ／ 對面 →</th>${names.map(n => `<th>${esc(n)}</th>`).join("")}</tr></thead>
+      <tbody>${rows}</tbody></table></div>`;
+  document.getElementById("ai-detail").innerHTML = `<div class="rules-note ai-method">
+    <strong>方法</strong>
+    <p>每個實測格：兩套牌各自由神經網路 policy 操作（自我對抗聯賽訓練），收斂後以未參與訓練的
+    新亂數種子做 1,000 局決定論盲測（先攻、後攻各 500 局）。格中「先／後」為列牌組先攻／後攻時的勝率，
+    滑鼠停留可見 95% 信賴區間與資料來源。淡色「推算」格＝由對稱實測格取補數。
+    此為模擬器內固定牌表、已實作規則下的對局強度，僅供參考，不等於真實賽場勝率。</p></div>`;
+}
+
 // ---- dispatch ----
 const page = document.body.dataset.page;
 ({ meta: pageMeta, champions: pageChampions, deck: pageDeck, tiers: pageTiers,
-   search: pageSearch }[page] || (() => {}))()
+   search: pageSearch, ai: pageAi }[page] || (() => {}))()
   .catch(e => {
     const el = document.createElement("p");
     el.className = "hint warn";

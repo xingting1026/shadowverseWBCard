@@ -250,6 +250,11 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
         _write_json(out / "data" / "effects.zh.json",
                     json.loads(zh_path.read_text(encoding="utf-8")))
 
+    ai_path = Path(__file__).resolve().parent.parent / "ai_matrix.json"
+    if ai_path.exists():                    # AI 對局勝率表（模擬器盲測結果，人工維護）
+        _write_json(out / "data" / "ai-matrix.json",
+                    json.loads(ai_path.read_text(encoding="utf-8")))
+
     _write_json(out / "data" / "index.json",
                 {"generated_at": datetime.datetime.now(datetime.timezone.utc)
                     .strftime("%Y-%m-%d %H:%M UTC"),

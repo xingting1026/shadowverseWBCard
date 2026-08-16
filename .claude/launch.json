@@ -2,9 +2,26 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "site-preview",
+      "name": "shadowverse-pt",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "_analysis/shadowversePt",
+        "run",
+        "dev"
+      ],
+      "port": 5173
+    },
+    {
+      "name": "wbcard-site",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5000", "--directory", "site"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "5000",
+        "-d",
+        "site"
+      ],
       "port": 5000
     }
   ]
