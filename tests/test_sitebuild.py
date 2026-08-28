@@ -77,6 +77,9 @@ def test_export_site_writes_all_files(conn, tmp_path):
     cache.mkdir()
     (cache / "BP01-101.jpg").write_bytes(b"jpg")
     out = tmp_path / "site"
+    (out / "data").mkdir(parents=True)
+    (out / "ai.html").write_text("retired", encoding="utf-8")
+    (out / "data" / "ai-matrix.json").write_text("{}", encoding="utf-8")
     sitebuild.export_site(conn, out, cache, web_src=web,
                           fetch_images=False, log=None)
     idx = json.loads((out / "data" / "index.json").read_text(encoding="utf-8"))
@@ -88,6 +91,8 @@ def test_export_site_writes_all_files(conn, tmp_path):
     assert cards["BP01-101"] == ["火龍", 100, 0]   # 最省替換用到的印刷也在卡表裡
     assert cards["BP01-E01"] == ["火龍", 200, 1]   # 進化卡帶旗標
     assert (out / "index.html").exists()
+    assert not (out / "ai.html").exists()
+    assert not (out / "data" / "ai-matrix.json").exists()
     assert (out / "img" / "BP01-101.jpg").exists()
     # 卡片查詢索引：冠軍 DK1 用了 BP01-001×3（主）與 BP01-E01×2（進化）
     usage = json.loads((out / "data" / "usage" / "BP01.json").read_text(encoding="utf-8"))

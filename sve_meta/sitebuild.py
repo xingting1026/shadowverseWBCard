@@ -217,6 +217,9 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
                 fetch_images=True, image_delay=0.1, log=print):
     """完整產站。"""
     out = Path(out_dir)
+    # 產站採增量覆寫；主動清掉已下線功能的舊輸出，避免本機或持久化工作目錄仍可開啟。
+    (out / "ai.html").unlink(missing_ok=True)
+    (out / "data" / "ai-matrix.json").unlink(missing_ok=True)
     nmap = byname.name_map(conn)
     tmap = byname.type_map(conn)
     cheap_id = byname.cheapest_by_identity(conn)
@@ -249,11 +252,6 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
     if zh_path.exists():                    # 繁中翻譯（人工/AI 維護，缺卡由前端 fallback 日文）
         _write_json(out / "data" / "effects.zh.json",
                     json.loads(zh_path.read_text(encoding="utf-8")))
-
-    ai_path = Path(__file__).resolve().parent.parent / "ai_matrix.json"
-    if ai_path.exists():                    # AI 對局勝率表（模擬器盲測結果，人工維護）
-        _write_json(out / "data" / "ai-matrix.json",
-                    json.loads(ai_path.read_text(encoding="utf-8")))
 
     _write_json(out / "data" / "index.json",
                 {"generated_at": datetime.datetime.now(datetime.timezone.utc)
