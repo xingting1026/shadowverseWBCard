@@ -1,7 +1,8 @@
 """合併/驗證 AI 翻譯批次 → translations/effects.zh.json（可重跑、可增量）。
 
 用法：
-  python merge_zh.py <批次資料夾>     # 讀 zh_*.json，驗證後合併進 translations/effects.zh.json
+  python merge_zh.py <批次資料夾>        # 讀 zh_*.json，驗證後合併進 translations/effects.zh.json
+  python merge_zh.py <批次資料夾> --all  # 母本改用 DB 全卡池（新彈剛發售、尚未入賞時先翻先合併）
 
 驗證（不合格的條目列出並跳過→保留日文 fallback，不會整批失敗）：
 1. key 必須存在於日文母本（site/data/effects.ja.json），結構 B/E 對得上。
@@ -21,6 +22,26 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 OUT = ROOT / "translations" / "effects.zh.json"
 JA = ROOT / "site" / "data" / "effects.ja.json"
+
+
+def ja_master(all_cards=False):
+    """日文母本 {卡名: {"B"|"E": [牌效, flavor]}}。
+    預設讀網站匯出的 effects.ja.json（只含入賞牌組用過的卡）；
+    all_cards=True 改從 sve_meta.db 整個卡池產生（新彈發售、還沒人入賞時先翻用）。"""
+    if not all_cards:
+        return json.loads(JA.read_text(encoding="utf-8"))
+    import sqlite3
+    from sve_meta import byname
+    from sve_meta.config import DB_PATH
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    eff = {}
+    for r in conn.execute(
+            "SELECT name, type, text, flavor FROM cards "
+            "WHERE text IS NOT NULL AND text != '' ORDER BY text_full DESC, card_number"):
+        eff.setdefault(r["name"], {}).setdefault(
+            "E" if byname.is_evolve(r["type"]) else "B", [r["text"], r["flavor"] or ""])
+    return eff
 
 TOKEN = re.compile(r"\[[^\[\]]+\]")
 # 關鍵字圖示：翻譯時可（也應該）轉成全形中文關鍵字
@@ -59,8 +80,8 @@ def _tokens(text):
     return sorted(t for t in TOKEN.findall(text) if t not in KEYWORD_TOKENS)
 
 
-def main(batch_dir):
-    ja = json.loads(JA.read_text(encoding="utf-8"))
+def main(batch_dir, all_cards=False):
+    ja = ja_master(all_cards)
     merged = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     ok = skipped = 0
     problems = []
@@ -112,4 +133,5 @@ def main(batch_dir):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else "translation_batches")
+    args = [a for a in sys.argv[1:] if a != "--all"]
+    main(args[0] if args else "translation_batches", all_cards="--all" in sys.argv)

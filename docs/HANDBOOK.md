@@ -171,12 +171,17 @@ events (event_id PK, title, store, pref, players, start_date,
 **補中文翻譯（半自動，想做時再做）**：
 
 ```bash
-python missing_zh.py                    # 看缺多少
-python missing_zh.py --export zh_todo   # 缺的切成 ja_XX.json 批次檔
+python missing_zh.py                              # 看缺多少（母本＝網站用到的卡）
+python missing_zh.py --export zh_todo             # 缺的切成 ja_XX.json 批次檔
+python missing_zh.py --all --export zh_todo       # 母本改用 DB 全卡池：新彈剛發售、還沒人入賞就能先翻
+python missing_zh.py --all --set BP22 --export d  # 只匯出某個 set
 ```
 
-然後把批次檔交給 LLM 翻譯（歷史上是派 Claude Sonnet 子代理，每批 110~150 卡名）。
-翻譯 prompt 的鐵則（完整版可參考 git log 中派工用的 prompt）：
+新彈想提前錄入（不等牌組出現）：`python -c "from sve_meta import db,cardmaster,prices; from sve_meta.config import DB_PATH; c=db.get_conn(DB_PATH); cardmaster.refresh_set(c,'BP22'); prices.refresh_set(c,'bp22'); c.commit()"`。
+
+然後把批次檔交給 LLM 翻譯（2026-10 是派 20 個 Claude Sonnet 子代理並行，每批 60 卡名，
+完整規範與術語表在 [translations/TRANSLATION_GUIDE.md](../translations/TRANSLATION_GUIDE.md)）。
+翻譯 prompt 的鐵則：
 
 - JSON key（日文卡名）一字不改；『』內引用卡名保留日文
 - 半形 `[圖示]` token 原樣保留（只有 [ファンファーレ]→【入場曲】、[ラストワード]→【謝幕曲】、[起動]→【起動】三個例外）
@@ -185,7 +190,8 @@ python missing_zh.py --export zh_todo   # 缺的切成 ja_XX.json 批次檔
 翻完放進資料夾後：
 
 ```bash
-python merge_zh.py zh_todo    # 驗證（token/長度）+ 術語統一 + 合併
+python merge_zh.py zh_todo          # 驗證（token/長度）+ 術語統一 + 合併
+python merge_zh.py zh_todo --all    # 批次是用 --all 匯出的（含未入賞卡）就要加 --all，否則會被當成未知卡名跳過
 python build_site.py --no-images
 git add -A && git commit && git push
 ```
