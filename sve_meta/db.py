@@ -23,6 +23,13 @@ CREATE TABLE IF NOT EXISTS events (
   event_id TEXT PRIMARY KEY, title TEXT, store TEXT, pref TEXT,
   players INTEGER, start_date TEXT, rankings_json TEXT, fetched_at REAL
 );
+CREATE TABLE IF NOT EXISTS relations (
+  card_number TEXT, related TEXT, pos INTEGER,
+  PRIMARY KEY (card_number, related)
+);
+CREATE TABLE IF NOT EXISTS relation_fetch (
+  card_number TEXT PRIMARY KEY, fetched_at REAL
+);
 """
 
 def get_conn(path=DB_PATH):

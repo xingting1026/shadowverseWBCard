@@ -50,6 +50,12 @@ jobs:
         continue-on-error: true
         run: python update_sets.py
 
+      # 官網「関連カード」：只補還沒抓過的卡（新彈），每次最多 250 張免超時（每張約 2~3 秒）
+      - name: 補関連カード（僅排程時）
+        if: github.event_name != 'push'
+        continue-on-error: true
+        run: python update_relations.py --limit 250
+
       - name: 產靜態站（含補抓新卡圖）
         run: python build_site.py
 

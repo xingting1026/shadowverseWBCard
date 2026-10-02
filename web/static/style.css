@@ -103,6 +103,10 @@ tr:first-child .rankno{background:var(--accent-2);color:#2a1f00}
 .efftext{font-size:.9rem;line-height:1.7;white-space:normal;word-break:break-word}
 .flavor{margin-top:.8rem;padding-top:.6rem;border-top:1px solid var(--border);
   color:var(--muted);font-size:.82rem;font-style:italic;line-height:1.6}
+.relbody h4{margin:.9rem 0 .4rem;font-size:.85rem;color:var(--muted)}
+.relgrid{display:flex;flex-wrap:wrap;gap:.5rem}
+.relgrid .card{width:92px;font-size:.72rem}
+.relgrid .card .name{min-height:0}
 .modal-x{position:absolute;top:.55rem;right:.6rem;width:1.9rem;height:1.9rem;
   border:none;border-radius:8px;background:var(--surface2);color:var(--muted);
   font-size:.95rem;cursor:pointer}

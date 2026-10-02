@@ -7,7 +7,8 @@
   data/month/YYYY-MM.json        該月賽事、牌組明細、冠軍最省組件
   data/tiers.json                近 30 天原型聚類（T0~T5）
   data/cards.json                {cn: [卡名, 單價或 null]}（只含用到的卡）
-  img/{cn}.jpg                   卡圖縮圖（從 img_cache/ 複製；缺的先抓）
+  data/relations.json            官網「関連カード」{cn: [[關聯卡號, 卡名, 是否進化], ...]}（只含用到的卡）
+  img/{cn}.jpg                   卡圖縮圖（從 img_cache/ 複製；缺的先抓；含關聯目標）
 """
 import json
 import time
@@ -141,6 +142,21 @@ def export_effects(conn, used_cns, nmap, tmap):
     return eff
 
 
+def export_relations(conn, used_cns, nmap, tmap):
+    """官網「関連カード」：{卡號: [[關聯卡號, 卡名, 是否進化], ...]}，只含網站用到的卡。
+    關聯目標可能不在 cards.json（衍生物等），所以把名字/進化旗標一起帶，前端不必另外查。"""
+    rel = {}
+    for r in conn.execute(
+            "SELECT card_number, related FROM relations ORDER BY card_number, pos"):
+        cn = r["card_number"]
+        if cn not in used_cns:
+            continue
+        rel.setdefault(cn, []).append(
+            [r["related"], nmap.get(r["related"], r["related"]),
+             1 if byname.is_evolve(tmap.get(r["related"])) else 0])
+    return rel
+
+
 def build_usage_index(month_datas):
     """卡片查詢用的反向索引：卡號 → 用過它的『第 1 名』牌組清單。
     依 set 拆檔（查一張卡只需下載該 set 的小 JSON）。
@@ -253,13 +269,18 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
         _write_json(out / "data" / "effects.zh.json",
                     json.loads(zh_path.read_text(encoding="utf-8")))
 
+    relations = export_relations(conn, used, nmap, tmap)
+    _write_json(out / "data" / "relations.json", relations)
+    # 關聯目標（進化面、衍生物）也要有卡圖，才能在彈窗裡顯示
+    img_cns = used | {rel[0] for rels in relations.values() for rel in rels}
+
     _write_json(out / "data" / "index.json",
                 {"generated_at": datetime.datetime.now(datetime.timezone.utc)
                     .strftime("%Y-%m-%d %H:%M UTC"),
                  "months": months, "latest": months[-1] if months else None})
 
     if fetch_images:
-        n = fetch_missing_images(conn, used, img_cache_dir, delay=image_delay, log=log)
+        n = fetch_missing_images(conn, img_cns, img_cache_dir, delay=image_delay, log=log)
         if log:
             log(f"新抓卡圖 {n} 張")
 
@@ -269,7 +290,7 @@ def export_site(conn, out_dir, img_cache_dir, web_src=WEB_SRC,
     img_out = out / "img"
     img_out.mkdir(parents=True, exist_ok=True)
     copied = 0
-    for cn in used:
+    for cn in img_cns:
         src = Path(img_cache_dir) / f"{cn}.jpg"
         dst = img_out / f"{cn}.jpg"
         # 佔位圖事後補成真圖時內容會變，所以比大小決定要不要重複製

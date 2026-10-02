@@ -69,8 +69,13 @@ async function effHTML(name, evo) {
     (entry[1] ? `<div class="flavor">${esc(entry[1]).replace(/\n/g, "<br>")}</div>` : "");
 }
 
-async function openCardModal(cn) {
-  const [name, , evo] = (CARDS && CARDS[cn]) || [cn, null, 0];
+// 官網「関連カード」（進化面／衍生物／同名印刷），照搬官方標示，不自己推斷
+let _relCache = null;
+const loadRelations = () => (_relCache ||= J("data/relations.json").catch(() => ({})));
+
+// hint：關聯目標可能不在 cards.json（衍生物等），由 relations.json 帶名字與進化旗標
+async function openCardModal(cn, hint) {
+  const [name, , evo] = (CARDS && CARDS[cn]) || hint || [cn, null, 0];
   const back = document.createElement("div");
   back.className = "modal-back";
   back.innerHTML = `<div class="modal">
@@ -83,6 +88,7 @@ async function openCardModal(cn) {
         <a data-l="ja" class="${EFFLANG === "ja" ? "on" : ""}">日文</a>
       </div>
       <div class="effbody"><p class="hint">載入中…</p></div>
+      <div class="relbody"></div>
     </div>
     <button class="modal-x" aria-label="關閉">✕</button></div>`;
   const body = back.querySelector(".effbody");
@@ -96,10 +102,30 @@ async function openCardModal(cn) {
   });
   const close = () => { back.remove(); document.removeEventListener("keydown", onKey); };
   const onKey = e => { if (e.key === "Escape") close(); };
-  back.onclick = e => { if (e.target === back || e.target.className === "modal-x") close(); };
+  back.onclick = e => {
+    const rel = e.target.closest(".relbody .card[data-cn]");
+    if (rel) {                      // 點關聯卡 → 換成那張卡的彈窗（攔掉全域的開窗事件）
+      e.stopPropagation();
+      close();
+      openCardModal(rel.dataset.cn, JSON.parse(rel.dataset.hint));
+      return;
+    }
+    if (e.target === back || e.target.className === "modal-x") close();
+  };
   document.addEventListener("keydown", onKey);
   document.body.appendChild(back);
   render();
+  loadRelations().then(rels => {
+    const list = rels[cn] || [];
+    if (!list.length) return;
+    back.querySelector(".relbody").innerHTML =
+      `<h4>關聯卡 <span class="hint">（官網標示）</span></h4><div class="relgrid">` +
+      list.map(([rcn, rname, revo]) =>
+        `<div class="card" data-cn="${esc(rcn)}" data-hint="${esc(JSON.stringify([rname, null, revo]))}">
+          <img src="img/${encodeURIComponent(rcn)}.jpg" alt="${esc(rcn)}" loading="lazy">
+          <div class="name">${esc(rname)}${revo ? "（進化）" : ""}</div>
+          <div class="code">${esc(rcn)}</div></div>`).join("") + `</div>`;
+  });
 }
 
 document.addEventListener("click", e => {

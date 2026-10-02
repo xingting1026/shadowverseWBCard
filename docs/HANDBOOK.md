@@ -32,6 +32,7 @@
 ┌────────── GitHub Actions（每日 3 次：台灣 18:00 / 20:00 / 22:10）──────────┐
 │ scrape_meta.py --days 7   抓近7天賽果+牌組 → sve_meta.db                  │
 │ update_sets.py            新彈自動補卡表/牌效/價格；刷新近30天set價格      │
+│ update_relations.py       補官網「関連カード」（只抓還沒抓的卡，每次≤400）  │
 │ build_site.py             sve_meta.db → site/（HTML+JS+JSON+卡圖）        │
 │ git commit db+img_cache   （狀態持久化，下次增量）                        │
 │ deploy-pages              site/ → GitHub Pages                            │
@@ -108,6 +109,7 @@ events (event_id PK, title, store, pref, players, start_date,
 | `effects.zh.json` | 同上結構的繁中版（來源是 repo 的 `translations/effects.zh.json`） |
 | `tiers.json` | `{window:{start,end,days}, total_decks, clusters:[{cls,label,tier,score,share,n,wins,signature,consensus:{main,evo},flexible,samples}], others}` |
 | `usage/{SET}.json` | `{卡號: [[月份,牌組碼,活動,日期,人數,張數],...]}`——卡片查詢的反向索引（只收第1名牌組） |
+| `relations.json` | `{卡號: [[關聯卡號, 卡名, 是否進化], ...]}`——官網單卡頁「関連カード」照搬（進化面/衍生物/同名印刷），牌效彈窗下方顯示，點了可跳到那張卡；目標卡的卡圖也會一併產出 |
 
 牌效文字裡的記號：`[コスト2]`、`[攻撃力]`、`[体力]`、`[エルフ]` 等半形方括號是
 **圖示佔位符**（原卡面上的 icon）；`【入場曲】`、`【疾走】` 等全形是關鍵字能力；
@@ -135,6 +137,7 @@ events (event_id PK, title, store, pref, players, start_date,
 |---|---|---|
 | `scrape_meta.py` | 抓賽果（`--days N` / `--from --to --by-month` / `--min 人數` / `--delay`） | Actions 每天自動；手動回補歷史才自己跑 |
 | `update_sets.py` | 新彈偵測補資料＋刷新近期價格（`--no-prices` 只補新彈） | Actions 每天自動 |
+| `update_relations.py` | 抓官網單卡頁「関連カード」存 `relations` 表（`--limit N`、`--delay 秒`）；抓過的卡不重抓 | Actions 每天自動（新彈才有東西抓） |
 | `build_site.py` | 產站（`--no-images` 跳過抓圖；`--out` 換輸出目錄） | Actions 自動；本機驗證時 |
 | `run.py` | 產站＋本機預覽伺服器 :5000 | 本機開發 |
 | `init_data.py` | 一次性灌全部 set 卡表+價格 | 幾乎不再需要（setsync 會自動補新的） |

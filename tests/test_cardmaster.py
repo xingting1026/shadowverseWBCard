@@ -151,3 +151,44 @@ def test_effect_text_empty_when_no_detail():
             '<p class="ttl">テスト</p></li></ul>')
     c = cardmaster.parse_cardlist(html)[0]
     assert c["text"] == "" and c["flavor"] == ""
+
+
+# ---- 関連カード ----
+_REL_HTML = (
+    '<div class="cardlist-Detail_Relation"><div class="center-Txtarea">'
+    '<h2 class="txtarea-Ttl Serif ja bold">関連カード</h2></div>'
+    '<ul class="cardlist-Result_List cardlist-Result_List_Gallery">'
+    '<li><a href="/cardlist/?cardno=BP19-020"><img src="x.png" alt="出航の咎人・バルバロス"></a></li>'
+    '<li><a href="/cardlist/?cardno=BP19-T01"><img src="y.png" alt="戦慄の海賊旗"></a></li>'
+    '<li><a href="/cardlist/?cardno=BP19-020"><img src="x.png" alt="重複"></a></li>'
+    '</ul></div>'
+    '<div class="cardlist-Detail_Products"><a href="/cardlist/cardsearch?expansion=BP19">カードリスト</a></div>'
+)
+
+
+def test_parse_relations_reads_official_block_in_order():
+    assert cardmaster.parse_relations(_REL_HTML) == ["BP19-020", "BP19-T01"]
+
+
+def test_parse_relations_without_block_is_empty():
+    assert cardmaster.parse_relations("<html><body><p>nothing</p></body></html>") == []
+
+
+def test_refresh_relations_only_fetches_unfetched_and_respects_limit(conn):
+    for cn in ("BP19-019", "BP19-020", "BP19-T01"):
+        conn.execute("INSERT INTO cards(card_number, name, set_code) VALUES(?,?,?)", (cn, cn, "BP19"))
+    calls = []
+
+    def fake(cn):
+        calls.append(cn)
+        return _REL_HTML if cn == "BP19-019" else "<html></html>"
+
+    assert cardmaster.refresh_relations(conn, limit=2, fetcher=fake) == 2
+    assert calls == ["BP19-019", "BP19-020"]
+    assert cardmaster.relations_of(conn, "BP19-019") == ["BP19-020", "BP19-T01"]
+    assert cardmaster.relations_of(conn, "BP19-020") == []
+    # 第二次只補剩下那張；抓過的（含 0 筆的）不重抓
+    calls.clear()
+    assert cardmaster.refresh_relations(conn, fetcher=fake) == 1
+    assert calls == ["BP19-T01"]
+    assert cardmaster.refresh_relations(conn, fetcher=fake) == 0

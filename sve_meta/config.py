@@ -24,3 +24,4 @@ DECKLOG_IMG_REFERER = "https://decklog.bushiroad.com/"
 YUYUTEI_SET_URL = "https://yuyu-tei.jp/sell/sev/s/{set}"
 CARDLIST_URL = "https://shadowverse-evolve.com/cardlist/cardsearch/?expansion={set}&view=text"
 CARDLIST_PAGE_URL = "https://shadowverse-evolve.com/cardlist/cardsearch_ex?expansion={set}&view=text&page={page}"
+CARD_PAGE_URL = "https://shadowverse-evolve.com/cardlist/?cardno={cn}"   # 單卡頁（関連カード／Q&A）
