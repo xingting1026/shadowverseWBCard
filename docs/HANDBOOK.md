@@ -75,7 +75,7 @@
 
 | 來源 | 用途 | 備註 |
 |---|---|---|
-| Bushi-Navi API `api-user.bushi-navi.com` | 賽事清單與名次 | header `X-Accept-Version: v1`；資料最早回溯 2024-05-01；**只有最終名次，無對局細節（誰打誰/勝負）** |
+| Bushi-Navi API `api-user.bushi-navi.com` | 賽事清單與名次 | header `X-Accept-Version: v1`；資料最早回溯 2024-05-01；**只有最終名次，無對局細節（誰打誰/勝負）**；名次在 `grouped_rankings`（有決賽輪的最終名次），小店賽（7~15 人）只有 `primary_result`（預賽名次），兩者都讀；預設收 ≥4 人 |
 | DeckLog `decklog.bushiroad.com` | 牌組碼 → 60張明細 | POST `/system/app/api/view/{code}`；跨 Bushiroad 全遊戲共用（可能查到 WS 等他遊戲牌組） |
 | 官方卡表 `shadowverse-evolve.com/cardlist/` | 卡名/種類/數值/卡圖路徑/**日文牌效** | 列表頁就有完整牌效；HTML 有未閉合的 `<img>`，**必須用 lxml 解析** |
 | yuyu-tei `yuyu-tei.jp/sell/sev/` | 單卡日幣售價 | 部分預組/PR 無單卡價 → 顯示「無價卡」不計入金額 |

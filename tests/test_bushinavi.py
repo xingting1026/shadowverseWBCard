@@ -41,3 +41,25 @@ def test_fetch_events_filters_by_min_players():
                                     getter=fake_getter)
     assert [e["event_id"] for e in events] == ["1"]
     assert events[0]["rankings"][0]["deck_code"] == "AAA"
+
+
+def test_parse_event_detail_falls_back_to_primary_result():
+    # 小型賽事只有 primary_result（預賽名次），grouped_rankings 是空的
+    payload = {"success": {"joined_player_count": 7, "grouped_rankings": {}, "primary_result": {
+        "": {"t1": {"rank": 2, "team_member": [
+                 {"player_name": "a", "deck_param1": "ドラゴン", "deck_recipe_id": "QE2GC"}]},
+             "t2": {"rank": 1, "team_member": [
+                 {"player_name": "b", "deck_param1": "ウマ娘", "deck_recipe_id": "1PGXP2"}]}}}}}
+    detail = bushinavi.parse_event_detail(payload)
+    assert detail["players"] == 7
+    assert [(r["rank"], r["deck_code"]) for r in detail["rankings"]] == [(1, "1PGXP2"), (2, "QE2GC")]
+
+
+def test_parse_event_detail_prefers_grouped_rankings_over_primary():
+    payload = {"success": {"joined_player_count": 39,
+        "grouped_rankings": {"": {"t1": {"rank": 1, "team_member": [
+            {"player_name": "final", "deck_param1": "ロイヤル", "deck_recipe_id": "FJU1J"}]}}},
+        "primary_result": {"": {"t2": {"rank": 1, "team_member": [
+            {"player_name": "swiss", "deck_param1": "ドラゴン", "deck_recipe_id": "1ACAAG"}]}}}}}
+    detail = bushinavi.parse_event_detail(payload)
+    assert [r["deck_code"] for r in detail["rankings"]] == ["FJU1J"]

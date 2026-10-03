@@ -37,11 +37,16 @@ def parse_event_detail(payload):
     NOTE: The original spec assumed one level of grouped_rankings; the real
     API has an extra outer grouping key (often "" or a group label), so we
     iterate both levels here.
+
+    小型賽事（通常 <16 人、沒有決賽輪）只有 ``primary_result``（預賽/瑞士輪名次），
+    ``grouped_rankings`` 是空的；大型賽事兩者都有，grouped_rankings 才是最終名次。
+    所以 grouped_rankings 有資料就用它，沒有才退回 primary_result（2026-10 發現，
+    之前這類賽事全部被當成「無名次」漏掉）。
     """
     s = payload.get("success", payload)
     players = int(s.get("joined_player_count") or 0)
     rankings = []
-    grouped = s.get("grouped_rankings", {}) or {}
+    grouped = s.get("grouped_rankings", {}) or s.get("primary_result", {}) or {}
     for group in grouped.values():
         # group is { team_id: {"rank": N, "team_member": [...]} }
         for entry in group.values():

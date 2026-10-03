@@ -1,7 +1,7 @@
 """Shadowverse Evolve 大會結果爬取 + 持久化（牌組以名稱存）。資料最早到 2024-05-01。
 
 用法：
-  python scrape_meta.py                                   # 近 30 天、≥8 人（預設）
+  python scrape_meta.py                                   # 近 30 天、≥4 人（預設）
   python scrape_meta.py --days 14 --min 16                # 近 14 天、≥16 人
   python scrape_meta.py --from 2024-05-01 --to 2024-12-31 --min 8
   python scrape_meta.py --from 2024-05-01 --to 2026-06-30 --by-month   # 逐月抓（做歷史 meta 推薦）
@@ -43,7 +43,8 @@ def main():
     p.add_argument("--from", dest="frm", help="起始日 YYYY-MM-DD")
     p.add_argument("--to", dest="to", help="結束日 YYYY-MM-DD")
     p.add_argument("--days", type=int, default=30, help="未給 --from 時，往回幾天（預設 30）")
-    p.add_argument("--min", dest="minp", type=int, default=8, help="最小參賽人數（預設 8）")
+    p.add_argument("--min", dest="minp", type=int, default=4,
+                   help="最小參賽人數（預設 4；小店賽 7~15 人只公布預賽名次，也收）")
     p.add_argument("--by-month", action="store_true", help="逐月抓取（適合大區間歷史）")
     p.add_argument("--delay", type=float, default=None,
                    help="每請求間隔秒數（預設 1.0；回補歷史可設 0.3~0.5 加速，但較可能被限流）")
